@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '../../lib/supabase'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -13,27 +14,40 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    
-    // Call our API route instead of Supabase directly!
-    const endpoint = isSignUp ? '/api/auth/signup' : '/api/auth/login'
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    })
-    
-    const data = await res.json()
-    
-    if (data.error) {
-      setError(data.error.message)
+
+    const normalizedEmail = email.trim().toLowerCase()
+
+    if (!normalizedEmail || !password) {
+      setError('Email and password are required')
+      return
+    }
+
+    const authCall = isSignUp
+      ? supabase.auth.signUp({ email: normalizedEmail, password })
+      : supabase.auth.signInWithPassword({ email: normalizedEmail, password })
+
+    const { error } = await authCall
+
+    if (error) {
+      setError(error.message)
     } else {
-      router.push('/dashboard')
+      router.push('/')
     }
   }
 
-  const handleGoogleSignIn = () => {
-    // Redirect to our Google OAuth API route
-    window.location.href = '/api/auth/google'
+  const handleGoogleSignIn = async () => {
+    setError('')
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`
+      }
+    })
+
+    if (error) {
+      setError(error.message)
+    }
   }
 
   return (
