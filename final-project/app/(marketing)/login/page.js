@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '../../../lib/supabase'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -53,7 +53,7 @@ export default function LoginPage() {
   return (
     <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px' }}>
       <h1>{isSignUp ? 'Sign Up' : 'Login'}</h1>
-      
+
       <form onSubmit={handleSubmit}>
         <input
           type="email"
