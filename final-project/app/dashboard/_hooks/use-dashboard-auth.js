@@ -13,6 +13,7 @@ export function useDashboardAuth() {
     async function checkUser() {
       const { data, error } = await supabase.auth.getUser()
       if (error || !data?.user) {
+        setLoading(false)
         router.push("/login")
         return
       }
