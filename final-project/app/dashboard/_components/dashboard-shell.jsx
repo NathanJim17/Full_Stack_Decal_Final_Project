@@ -51,6 +51,18 @@ export function DashboardShell({ user, onLogout }) {
     (c) => !search || c.code.toLowerCase().includes(search.toLowerCase()) || c.name.toLowerCase().includes(search.toLowerCase())
   )
 
+  // Temporary debug logs to verify auth user + fetched dashboard data.
+  console.log("dashboard user id:", user?.id)
+  console.log(
+    "dashboard data:",
+    JSON.stringify({
+      coursesCount: courses.length,
+      deadlinesCount: deadlines.length,
+      coursesError,
+      deadlinesError,
+    })
+  )
+
   return (
     <div
       onClick={() => { setNotifOpen(false); setAvatarOpen(false) }}
@@ -75,6 +87,7 @@ export function DashboardShell({ user, onLogout }) {
           firstName={firstName}
           today={today}
           semesterLabel={`${semester.term} ${semester.year} · Week ${semester.currentWeek} of ${semester.weeksTotal}`}
+          courses={courses}
           filteredCourses={filteredCourses}
           search={search}
           coursesLoading={coursesLoading}

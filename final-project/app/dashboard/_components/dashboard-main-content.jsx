@@ -4,25 +4,21 @@ import { Button } from "@/components/ui/button"
 import { QUICK_ACTIONS, T, btnGhostStyle, cardStyle } from "../_lib/dashboard-data"
 import { Icon } from "./dashboard-icons"
 import { CourseCard, DeadlineRow, MetricCard } from "./dashboard-primitives"
-import { useDashboardCourses } from "../_hooks/use-dashboard-courses"
-import { useDashboardDeadlines } from "../_hooks/use-dashboard-deadlines"
-import { useState } from "react"
 
 export function DashboardMainContent({
   greeting,
   firstName,
   today,
   semesterLabel,
-  user
+  courses = [],
+  filteredCourses = [],
+  search = "",
+  coursesLoading = false,
+  coursesError = null,
+  deadlines = [],
+  deadlinesLoading = false,
+  deadlinesError = null,
 }) {
-  const [search, setSearch] = useState("")
-  const { courses, loading: coursesLoading, error: coursesError } = useDashboardCourses(user?.id)
-  const { deadlines, loading: deadlinesLoading, error: deadlinesError } = useDashboardDeadlines(user?.id)
-
-  const filteredCourses = courses.filter(
-    (c) => !search || c.code.toLowerCase().includes(search.toLowerCase()) || c.name.toLowerCase().includes(search.toLowerCase())
-  )
-
   const upcomingTasks = deadlines.filter((d) => d.daysLeft > 0).length
   const dueThisWeek = deadlines.filter((d) => d.daysLeft <= 7).length
   return (
