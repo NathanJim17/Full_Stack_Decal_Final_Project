@@ -11,6 +11,8 @@ export function DashboardMainContent({
   today,
   filteredCourses,
   search,
+  coursesLoading = false,
+  coursesError = null,
   deadlines = [],
   deadlinesLoading = false,
   deadlinesError = null,
@@ -39,7 +41,15 @@ export function DashboardMainContent({
             </Button>
           </div>
 
-          {filteredCourses.length === 0 ? (
+          {coursesLoading ? (
+            <div style={cardStyle({ padding: "24px", textAlign: "center", fontSize: 13, color: T.muted })}>
+              Loading courses...
+            </div>
+          ) : coursesError ? (
+            <div style={cardStyle({ padding: "24px", textAlign: "center", fontSize: 13, color: "oklch(0.50 0.14 28)" })}>
+              Could not load courses: {coursesError}
+            </div>
+          ) : filteredCourses.length === 0 ? (
             <div style={cardStyle({ padding: "40px 24px", textAlign: "center" })}>
               <Icon name="alertCircle" size={28} color={T.border} />
               <p style={{ marginTop: 10, fontSize: 13, color: T.faint }}>No courses match &ldquo;{search}&rdquo;</p>
