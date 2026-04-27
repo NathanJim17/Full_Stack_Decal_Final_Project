@@ -1,11 +1,20 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { ALL_DEADLINES, QUICK_ACTIONS, T, btnGhostStyle, cardStyle } from "../_lib/dashboard-data"
+import { QUICK_ACTIONS, T, btnGhostStyle, cardStyle } from "../_lib/dashboard-data"
 import { Icon } from "./dashboard-icons"
 import { CourseCard, DeadlineRow, MetricCard } from "./dashboard-primitives"
 
-export function DashboardMainContent({ greeting, firstName, today, filteredCourses, search }) {
+export function DashboardMainContent({
+  greeting,
+  firstName,
+  today,
+  filteredCourses,
+  search,
+  deadlines = [],
+  deadlinesLoading = false,
+  deadlinesError = null,
+}) {
   return (
     <main style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
       <div style={{ marginBottom: 22 }}>
@@ -43,11 +52,21 @@ export function DashboardMainContent({ greeting, firstName, today, filteredCours
         <div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <h2 style={{ fontSize: 15, fontWeight: 600, color: T.text, fontFamily: "'Lora', serif" }}>Upcoming Deadlines</h2>
-            <span style={{ fontSize: 10, background: T.accentBg, color: T.accent, padding: "2px 8px", borderRadius: 99, fontWeight: 600 }}>{ALL_DEADLINES.length}</span>
+            <span style={{ fontSize: 10, background: T.accentBg, color: T.accent, padding: "2px 8px", borderRadius: 99, fontWeight: 600 }}>{deadlines.length}</span>
           </div>
 
           <div style={cardStyle({ padding: "12px", marginBottom: 18 })}>
-            {ALL_DEADLINES.map((dl, i) => <DeadlineRow key={dl.id} item={dl} index={i} />)}
+            {deadlinesLoading ? (
+              <div style={{ padding: "8px 4px", fontSize: 12, color: T.muted }}>Loading deadlines...</div>
+            ) : deadlinesError ? (
+              <div style={{ padding: "8px 4px", fontSize: 12, color: "oklch(0.50 0.14 28)" }}>
+                Could not load deadlines: {deadlinesError}
+              </div>
+            ) : deadlines.length === 0 ? (
+              <div style={{ padding: "8px 4px", fontSize: 12, color: T.muted }}>No upcoming deadlines.</div>
+            ) : (
+              deadlines.map((dl, i) => <DeadlineRow key={dl.id} item={dl} index={i} />)
+            )}
           </div>
 
           <h2 style={{ fontSize: 15, fontWeight: 600, color: T.text, fontFamily: "'Lora', serif", marginBottom: 12 }}>Quick Actions</h2>
