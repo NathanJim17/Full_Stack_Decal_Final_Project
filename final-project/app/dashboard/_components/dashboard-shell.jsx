@@ -7,6 +7,7 @@ import { useDashboardDeadlines } from "../_hooks/use-dashboard-deadlines"
 import { DashboardMainContent } from "./dashboard-main-content"
 import { DashboardSidebar } from "./dashboard-sidebar"
 import { DashboardTopNav } from "./dashboard-top-nav"
+import { DashboardDocumentsContent } from "./documents/documents-content"
 
 function getSemesterInfo(now = new Date()) {
   const year = now.getFullYear()
@@ -82,20 +83,24 @@ export function DashboardShell({ user, onLogout }) {
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <DashboardSidebar activeNav={activeNav} setActiveNav={setActiveNav} courses={courses} />
-        <DashboardMainContent
-          greeting={greeting}
-          firstName={firstName}
-          today={today}
-          semesterLabel={`${semester.term} ${semester.year} · Week ${semester.currentWeek} of ${semester.weeksTotal}`}
-          courses={courses}
-          filteredCourses={filteredCourses}
-          search={search}
-          coursesLoading={coursesLoading}
-          coursesError={coursesError}
-          deadlines={deadlines}
-          deadlinesLoading={deadlinesLoading}
-          deadlinesError={deadlinesError}
-        />
+        {activeNav === "docs" ? (
+          <DashboardDocumentsContent courses={courses} />
+        ) : (
+          <DashboardMainContent
+            greeting={greeting}
+            firstName={firstName}
+            today={today}
+            semesterLabel={`${semester.term} ${semester.year} · Week ${semester.currentWeek} of ${semester.weeksTotal}`}
+            courses={courses}
+            filteredCourses={filteredCourses}
+            search={search}
+            coursesLoading={coursesLoading}
+            coursesError={coursesError}
+            deadlines={deadlines}
+            deadlinesLoading={deadlinesLoading}
+            deadlinesError={deadlinesError}
+          />
+        )}
       </div>
     </div>
   )
