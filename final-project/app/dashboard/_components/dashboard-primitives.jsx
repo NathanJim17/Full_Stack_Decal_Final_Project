@@ -119,16 +119,20 @@ export function DeadlineRow({ item, index }) {
   )
 }
 
-export function MetricCard({ icon, label, value, sub, accent, iconBg, dot }) {
+export function MetricCard({ icon, label, value, sub, accent, iconBg, dot, actions = null }) {
   return (
-    <Card style={cardStyle({ padding: "18px 20px", flex: 1, animation: "fadeUp 0.3s ease both" })}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+    <Card
+      className={actions ? "gap-2" : undefined}
+      style={cardStyle({ padding: "18px 20px", flex: 1, animation: "fadeUp 0.3s ease both" })}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: actions ? 4 : 12 }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: T.muted, letterSpacing: "0.01em" }}>{label}</span>
         <div style={{ width: 30, height: 30, borderRadius: 8, background: iconBg || T.surface2, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Icon name={icon} size={14} color={accent || T.faint} />
         </div>
       </div>
-      {dot ? (
+      {actions ? (
+        <div>{actions}</div>
+      ) : dot ? (
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <span style={{ width: 9, height: 9, borderRadius: "50%", flexShrink: 0, display: "inline-block", background: "oklch(0.55 0.16 155)", boxShadow: "0 0 0 3px oklch(0.85 0.08 155 / 0.6)", animation: "craft-pulse 2.5s ease-in-out infinite" }} />
           <span style={{ fontSize: 13, fontWeight: 600, color: "oklch(0.40 0.12 155)" }}>{value}</span>
@@ -136,7 +140,7 @@ export function MetricCard({ icon, label, value, sub, accent, iconBg, dot }) {
       ) : (
         <div style={{ fontSize: 32, fontWeight: 700, color: T.text, fontFamily: "'Lora', serif", lineHeight: 1, marginBottom: 6 }}>{value}</div>
       )}
-      <div style={{ fontSize: 11.5, color: T.faint }}>{sub}</div>
+      {!actions && <div style={{ fontSize: 11.5, color: T.faint }}>{sub}</div>}
     </Card>
   )
 }

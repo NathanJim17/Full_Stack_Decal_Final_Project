@@ -8,6 +8,28 @@ import { DashboardMainContent } from "./dashboard-main-content"
 import { DashboardSidebar } from "./dashboard-sidebar"
 import { DashboardTopNav } from "./dashboard-top-nav"
 
+function getSemesterInfo(now = new Date()) {
+  const year = now.getFullYear()
+  const month = now.getMonth()
+  const isSpring = month <= 4
+  const isFall = month >= 7
+  const term = isSpring ? "Spring" : isFall ? "Fall" : "Summer"
+  const weeksTotal = 16
+
+  // Approximate semester starts for a rolling, non-static label.
+  const startDate = isSpring
+    ? new Date(year, 0, 20)
+    : isFall
+      ? new Date(year, 7, 20)
+      : new Date(year, 5, 10)
+
+  const elapsedMs = now.getTime() - startDate.getTime()
+  const elapsedWeeks = Math.floor(elapsedMs / (1000 * 60 * 60 * 24 * 7))
+  const currentWeek = Math.min(weeksTotal, Math.max(1, elapsedWeeks + 1))
+
+  return { term, year, currentWeek, weeksTotal }
+}
+
 export function DashboardShell({ user, onLogout }) {
   const [search, setSearch] = useState("")
   const [activeNav, setActiveNav] = useState("dashboard")
@@ -22,6 +44,7 @@ export function DashboardShell({ user, onLogout }) {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
+  const semester = getSemesterInfo()
   
 
   const filteredCourses = courses.filter(
@@ -46,11 +69,12 @@ export function DashboardShell({ user, onLogout }) {
       />
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        <DashboardSidebar activeNav={activeNav} setActiveNav={setActiveNav} />
+        <DashboardSidebar activeNav={activeNav} setActiveNav={setActiveNav} courses={courses} />
         <DashboardMainContent
           greeting={greeting}
           firstName={firstName}
           today={today}
+          semesterLabel={`${semester.term} ${semester.year} · Week ${semester.currentWeek} of ${semester.weeksTotal}`}
           filteredCourses={filteredCourses}
           search={search}
           coursesLoading={coursesLoading}
