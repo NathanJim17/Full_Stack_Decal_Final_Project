@@ -36,7 +36,7 @@ export function Progress({ value, color }) {
   )
 }
 
-export function CourseCard({ course }) {
+export function CourseCard({ course, onUploadDocument }) {
   return (
     <Card style={{ ...cardStyle({ padding: "20px 22px", marginBottom: 10 }), animation: "fadeUp 0.35s ease both" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
@@ -79,8 +79,8 @@ export function CourseCard({ course }) {
       )}
 
       <div style={{ display: "flex", gap: 7 }}>
-        <Button variant="outline" size="sm" style={btnGhostStyle}>
-          <Icon name="upload" size={12} color={T.faint} /> Upload Syllabus
+        <Button variant="outline" size="sm" style={btnGhostStyle} onClick={() => onUploadDocument?.()}>
+          <Icon name="upload" size={12} color={T.faint} /> Upload Document
         </Button>
         <Button variant="outline" size="sm" style={{ ...btnGhostStyle, marginLeft: "auto" }}>
           View All <Icon name="arrowRight" size={11} color="currentColor" />

@@ -52,18 +52,6 @@ export function DashboardShell({ user, onLogout }) {
     (c) => !search || c.code.toLowerCase().includes(search.toLowerCase()) || c.name.toLowerCase().includes(search.toLowerCase())
   )
 
-  // Temporary debug logs to verify auth user + fetched dashboard data.
-  console.log("dashboard user id:", user?.id)
-  console.log(
-    "dashboard data:",
-    JSON.stringify({
-      coursesCount: courses.length,
-      deadlinesCount: deadlines.length,
-      coursesError,
-      deadlinesError,
-    })
-  )
-
   return (
     <div
       onClick={() => { setAvatarOpen(false) }}
@@ -99,6 +87,9 @@ export function DashboardShell({ user, onLogout }) {
             deadlines={deadlines}
             deadlinesLoading={deadlinesLoading}
             deadlinesError={deadlinesError}
+            onOpenDocuments={() => setActiveNav("docs")}
+            onOpenCalendar={() => setActiveNav("calendar")}
+            onOpenNotion={() => window.open("https://www.notion.so/", "_blank", "noopener,noreferrer")}
           />
         )}
       </div>
