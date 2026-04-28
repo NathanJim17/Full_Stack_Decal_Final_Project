@@ -36,7 +36,7 @@ export function Progress({ value, color }) {
   )
 }
 
-export function CourseCard({ course, onUploadDocument, onViewAllCourses }) {
+export function CourseCard({ course, onUploadDocument, onOpenCourse }) {
   return (
     <Card style={{ ...cardStyle({ padding: "20px 22px", marginBottom: 10 }), animation: "fadeUp 0.35s ease both" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
@@ -77,8 +77,8 @@ export function CourseCard({ course, onUploadDocument, onViewAllCourses }) {
         <Button variant="outline" size="sm" style={btnGhostStyle} onClick={() => onUploadDocument?.()}>
           <Icon name="upload" size={12} color={T.faint} /> Upload Document
         </Button>
-        <Button variant="outline" size="sm" style={{ ...btnGhostStyle, marginLeft: "auto" }} onClick={() => onViewAllCourses?.()}>
-          View All <Icon name="arrowRight" size={11} color="currentColor" />
+        <Button variant="outline" size="sm" style={{ ...btnGhostStyle, marginLeft: "auto" }} onClick={() => onOpenCourse?.(course.id)}>
+          Open <Icon name="arrowRight" size={11} color="currentColor" />
         </Button>
       </div>
     </Card>

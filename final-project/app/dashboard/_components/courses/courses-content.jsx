@@ -1,11 +1,12 @@
 "use client"
 
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Progress } from "../dashboard-primitives"
 import { Icon } from "../dashboard-icons"
 import { T, btnGhostStyle, cardStyle } from "../../_lib/dashboard-data"
 
-function CourseOverviewCard({ course }) {
+function CourseOverviewCard({ course, semesterTermLabel }) {
   const upcomingCount = Array.isArray(course.deadlines) ? course.deadlines.length : 0
 
   return (
@@ -62,10 +63,10 @@ function CourseOverviewCard({ course }) {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 12, borderTop: `1px solid ${T.borderSub}` }}>
-          <span style={{ fontSize: 11.5, color: T.faint }}>Spring 2026</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 500, color: T.muted }}>
+          <span style={{ fontSize: 11.5, color: T.faint }}>{semesterTermLabel}</span>
+          <Link href={`/dashboard/courses/${course.id}`} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 500, color: T.muted, textDecoration: "none" }}>
             Open <Icon name="arrowRight" size={12} color="currentColor" />
-          </span>
+          </Link>
         </div>
       </div>
     </div>
@@ -80,6 +81,8 @@ export function DashboardCoursesContent({
   error = null,
   onOpenDocuments,
 }) {
+  const semesterTermLabel = semesterLabel?.split(" · ")[0] || "Current term"
+
   const filteredCourses = courses.filter(
     (course) =>
       !search ||
@@ -158,7 +161,7 @@ export function DashboardCoursesContent({
             alignItems: "start",
           }}>
           {filteredCourses.map((course) => (
-            <CourseOverviewCard key={course.id} course={course} />
+            <CourseOverviewCard key={course.id} course={course} semesterTermLabel={semesterTermLabel} />
           ))}
         </div>
       )}

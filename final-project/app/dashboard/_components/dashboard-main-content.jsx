@@ -19,6 +19,7 @@ export function DashboardMainContent({
   deadlinesLoading = false,
   deadlinesError = null,
   onOpenCourses,
+  onOpenCourse,
   onOpenDocuments,
   onOpenCalendar,
   onOpenNotion,
@@ -118,7 +119,7 @@ export function DashboardMainContent({
                 key={c.id}
                 course={c}
                 onUploadDocument={onOpenDocuments}
-                onViewAllCourses={onOpenCourses}
+                onOpenCourse={onOpenCourse}
               />
             ))
           )}
