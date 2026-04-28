@@ -31,11 +31,12 @@ export function SkeletonRow({ i }) {
   )
 }
 
-export function DocRow({ doc, index, courses, onDelete, onAssignCourse }) {
+export function DocRow({ doc, index, courses, onDelete, onAssignCourse, onRetryParse }) {
   const [hovered, setHovered] = useState(false)
   const [courseVal, setCourseVal] = useState(doc.courseId || "")
   const [deleted, setDeleted] = useState(false)
   const [savingCourse, setSavingCourse] = useState(false)
+  const [retrying, setRetrying] = useState(false)
 
   async function handleCourseChange(nextCourseId) {
     const prev = courseVal
@@ -55,6 +56,12 @@ export function DocRow({ doc, index, courses, onDelete, onAssignCourse }) {
   const handleDelete = () => {
     setDeleted(true)
     setTimeout(() => onDelete(doc.id), 280)
+  }
+
+  async function handleRetry() {
+    setRetrying(true)
+    await onRetryParse?.(doc.id)
+    setRetrying(false)
   }
 
   return (
@@ -166,12 +173,13 @@ export function DocRow({ doc, index, courses, onDelete, onAssignCourse }) {
           {hasError && (
             <button
               title="Retry extraction"
+              onClick={() => { void handleRetry() }}
               style={{
                 width: 32, height: 32, borderRadius: 8, border: `1.5px solid oklch(0.82 0.08 28)`,
-                background: "oklch(0.97 0.03 28)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "all 0.15s", color: "oklch(0.52 0.16 28)",
+                background: "oklch(0.97 0.03 28)", cursor: retrying ? "wait" : "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "all 0.15s", color: "oklch(0.52 0.16 28)", opacity: retrying ? 0.7 : 1,
               }}>
-              <Icon name="refresh" size={14} />
+              <Icon name={retrying ? "loader" : "refresh"} size={14} style={retrying ? { animation: "spin 1.2s linear infinite" } : {}} />
             </button>
           )}
 
@@ -193,7 +201,7 @@ export function DocRow({ doc, index, courses, onDelete, onAssignCourse }) {
   )
 }
 
-export function LibraryTable({ state, docs, courses, onDelete, onAssignCourse }) {
+export function LibraryTable({ state, docs, courses, onDelete, onAssignCourse, onRetryParse }) {
   if (state === "error") {
     return (
       <div style={cardStyle({ padding: "40px 24px", textAlign: "center" })}>
@@ -273,6 +281,7 @@ export function LibraryTable({ state, docs, courses, onDelete, onAssignCourse })
                   courses={courses}
                   onDelete={onDelete}
                   onAssignCourse={onAssignCourse}
+                  onRetryParse={onRetryParse}
                 />
               ))
           }
