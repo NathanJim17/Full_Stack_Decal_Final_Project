@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "../dashboard-primitives"
 import { Icon } from "../dashboard-icons"
@@ -80,7 +81,14 @@ export function DashboardCoursesContent({
   loading = false,
   error = null,
   onOpenDocuments,
+  onAddCourse,
 }) {
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newCode, setNewCode] = useState("")
+  const [newName, setNewName] = useState("")
+  const [newProf, setNewProf] = useState("")
+  const [adding, setAdding] = useState(false)
+  const [addError, setAddError] = useState("")
   const semesterTermLabel = semesterLabel?.split(" · ")[0] || "Current term"
 
   const filteredCourses = courses.filter(
@@ -89,6 +97,27 @@ export function DashboardCoursesContent({
       course.code.toLowerCase().includes(search.toLowerCase()) ||
       course.name.toLowerCase().includes(search.toLowerCase())
   )
+
+  async function handleCreateCourse() {
+    setAddError("")
+    setAdding(true)
+    const result = await onAddCourse?.({
+      code: newCode,
+      name: newName,
+      prof: newProf,
+    })
+    setAdding(false)
+
+    if (!result?.ok) {
+      setAddError(result?.error || "Could not create course.")
+      return
+    }
+
+    setNewCode("")
+    setNewName("")
+    setNewProf("")
+    setShowAddForm(false)
+  }
 
   return (
     <main style={{ flex: 1, overflowY: "auto", padding: "32px 36px" }}>
@@ -105,7 +134,10 @@ export function DashboardCoursesContent({
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
           <Button
             variant="outline"
-            disabled
+            onClick={() => {
+              setShowAddForm((prev) => !prev)
+              setAddError("")
+            }}
             style={{
               ...btnGhostStyle,
               padding: "9px 14px",
@@ -113,14 +145,53 @@ export function DashboardCoursesContent({
               background: "linear-gradient(180deg, oklch(0.57 0.18 285), oklch(0.50 0.18 285))",
               color: "#fff",
               boxShadow: "0 6px 18px oklch(0.50 0.18 285 / 0.20)",
-              opacity: 0.95,
-              cursor: "not-allowed",
+              opacity: 0.98,
             }}>
             <Icon name="plus" size={13} color="currentColor" /> Add course
           </Button>
-          <span style={{ fontSize: 11, color: T.faint }}>Coming soon</span>
         </div>
       </div>
+
+      {showAddForm && (
+        <div style={cardStyle({ padding: "14px 14px 12px", marginBottom: 16, maxWidth: 460 })}>
+          <div style={{ display: "grid", gap: 8 }}>
+            <input
+              value={newCode}
+              onChange={(e) => setNewCode(e.target.value)}
+              placeholder="Course code (e.g. CS 189)"
+              style={{ height: 34, borderRadius: 8, border: `1.5px solid ${T.borderSub}`, background: T.surface2, padding: "0 10px", fontSize: 12.5, color: T.text, fontFamily: "'DM Sans', sans-serif" }}
+            />
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Course name"
+              style={{ height: 34, borderRadius: 8, border: `1.5px solid ${T.borderSub}`, background: T.surface2, padding: "0 10px", fontSize: 12.5, color: T.text, fontFamily: "'DM Sans', sans-serif" }}
+            />
+            <input
+              value={newProf}
+              onChange={(e) => setNewProf(e.target.value)}
+              placeholder="Professor (optional)"
+              style={{ height: 34, borderRadius: 8, border: `1.5px solid ${T.borderSub}`, background: T.surface2, padding: "0 10px", fontSize: 12.5, color: T.text, fontFamily: "'DM Sans', sans-serif" }}
+            />
+          </div>
+
+          {addError && <div style={{ marginTop: 8, fontSize: 12, color: "oklch(0.50 0.14 28)" }}>{addError}</div>}
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
+            <Button variant="outline" size="sm" style={btnGhostStyle} onClick={() => setShowAddForm(false)} disabled={adding}>
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              style={{ ...btnGhostStyle, borderColor: T.accent, background: T.accent, color: "#fff" }}
+              onClick={() => { void handleCreateCourse() }}
+              disabled={adding}>
+              {adding ? "Adding..." : "Create course"}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div style={cardStyle({ padding: "32px", textAlign: "center", fontSize: 13, color: T.muted })}>

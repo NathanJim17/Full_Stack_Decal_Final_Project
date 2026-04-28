@@ -42,7 +42,7 @@ export function DashboardShell({ user, onLogout }) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const { courses, loading: coursesLoading, error: coursesError } = useDashboardCourses(user?.id)
+  const { courses, loading: coursesLoading, error: coursesError, createCourse } = useDashboardCourses(user?.id)
   const { deadlines, loading: deadlinesLoading, error: deadlinesError } = useDashboardDeadlines(user?.id)
 
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || user?.email?.split("@")[0] || "there"
@@ -104,6 +104,7 @@ export function DashboardShell({ user, onLogout }) {
             loading={coursesLoading}
             error={coursesError}
             onOpenDocuments={() => handleNavChange("docs")}
+            onAddCourse={createCourse}
           />
         ) : activeNav === "docs" ? (
           <DashboardDocumentsContent courses={courses} userId={user?.id} />
