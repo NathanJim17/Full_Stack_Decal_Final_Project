@@ -102,6 +102,20 @@ export function DashboardDocumentsContent({ courses = [], userId }) {
     await reload()
   }
 
+  async function handleAssignCourse(docId, courseId) {
+    const { error: updateError } = await supabase
+      .from("documents")
+      .update({ course_id: courseId })
+      .eq("id", docId)
+      .eq("user_id", userId)
+
+    if (updateError) {
+      return false
+    }
+    await reload()
+    return true
+  }
+
   const filteredDocs = activeFilter === "All"
     ? docs
     : docs.filter(d => d.status === activeFilter)
@@ -207,6 +221,7 @@ export function DashboardDocumentsContent({ courses = [], userId }) {
         docs={filteredDocs}
         courses={courses}
         onDelete={(id) => { void handleDelete(id) }}
+        onAssignCourse={(docId, courseId) => handleAssignCourse(docId, courseId)}
       />
     </main>
   )

@@ -31,10 +31,22 @@ export function SkeletonRow({ i }) {
   )
 }
 
-export function DocRow({ doc, index, courses, onDelete }) {
+export function DocRow({ doc, index, courses, onDelete, onAssignCourse }) {
   const [hovered, setHovered] = useState(false)
-  const [courseVal, setCourseVal] = useState(doc.course || "")
+  const [courseVal, setCourseVal] = useState(doc.courseId || "")
   const [deleted, setDeleted] = useState(false)
+  const [savingCourse, setSavingCourse] = useState(false)
+
+  async function handleCourseChange(nextCourseId) {
+    const prev = courseVal
+    setCourseVal(nextCourseId)
+    setSavingCourse(true)
+    const ok = await onAssignCourse?.(doc.id, nextCourseId || null)
+    setSavingCourse(false)
+    if (!ok) {
+      setCourseVal(prev)
+    }
+  }
 
   const canReview    = doc.status === "Ready to review"
   const hasError     = doc.status === "Error"
@@ -92,17 +104,19 @@ export function DocRow({ doc, index, courses, onDelete }) {
       <td style={{ padding: "13px 16px", borderBottom: `1px solid ${T.borderSub}` }}>
         <select
           value={courseVal}
-          onChange={e => setCourseVal(e.target.value)}
+          onChange={e => { void handleCourseChange(e.target.value) }}
+          disabled={savingCourse}
           style={{
             fontSize: 12, color: courseVal ? T.text : T.faint,
             background: courseVal ? T.accentBg : T.surface2,
             border: `1.5px solid ${courseVal ? "oklch(0.82 0.08 285)" : T.borderSub}`,
             borderRadius: 99, padding: "4px 10px", fontFamily: "'DM Sans', sans-serif",
-            fontWeight: courseVal ? 600 : 400, cursor: "pointer",
+            fontWeight: courseVal ? 600 : 400, cursor: savingCourse ? "wait" : "pointer",
             appearance: "none", minWidth: 100,
+            opacity: savingCourse ? 0.75 : 1,
           }}>
-          <option value="">⊕ Assign</option>
-          {courses.map(c => <option key={c.id ?? c.code} value={c.code}>{c.code}</option>)}
+          <option value="">{savingCourse ? "Saving..." : "⊕ Assign"}</option>
+          {courses.map(c => <option key={c.id ?? c.code} value={c.id}>{c.code}</option>)}
         </select>
       </td>
 
@@ -179,7 +193,7 @@ export function DocRow({ doc, index, courses, onDelete }) {
   )
 }
 
-export function LibraryTable({ state, docs, courses, onDelete }) {
+export function LibraryTable({ state, docs, courses, onDelete, onAssignCourse }) {
   if (state === "error") {
     return (
       <div style={cardStyle({ padding: "40px 24px", textAlign: "center" })}>
@@ -252,7 +266,14 @@ export function LibraryTable({ state, docs, courses, onDelete }) {
           {state === "loading"
             ? [0, 1, 2, 3].map(i => <SkeletonRow key={i} i={i} />)
             : docs.map((doc, i) => (
-                <DocRow key={doc.id} doc={doc} index={i} courses={courses} onDelete={onDelete} />
+                <DocRow
+                  key={doc.id}
+                  doc={doc}
+                  index={i}
+                  courses={courses}
+                  onDelete={onDelete}
+                  onAssignCourse={onAssignCourse}
+                />
               ))
           }
         </tbody>
