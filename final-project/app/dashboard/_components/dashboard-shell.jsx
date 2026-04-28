@@ -9,6 +9,8 @@ import { DashboardSidebar } from "./dashboard-sidebar"
 import { DashboardTopNav } from "./dashboard-top-nav"
 import { DashboardDocumentsContent } from "./documents/documents-content"
 import { DashboardCalendarContent } from "./calendar/calendar-content"
+import { DashboardCoursesContent } from "./courses/courses-content"
+import { DashboardSettingsContent } from "./settings/settings-content"
 
 function getSemesterInfo(now = new Date()) {
   const year = now.getFullYear()
@@ -69,10 +71,24 @@ export function DashboardShell({ user, onLogout }) {
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <DashboardSidebar activeNav={activeNav} setActiveNav={setActiveNav} courses={courses} />
-        {activeNav === "docs" ? (
+        {activeNav === "courses" ? (
+          <DashboardCoursesContent
+            courses={courses}
+            search={search}
+            semesterLabel={`${semester.term} ${semester.year} · Week ${semester.currentWeek} of ${semester.weeksTotal}`}
+            loading={coursesLoading}
+            error={coursesError}
+            onOpenDocuments={() => setActiveNav("docs")}
+          />
+        ) : activeNav === "docs" ? (
           <DashboardDocumentsContent courses={courses} userId={user?.id} />
         ) : activeNav === "calendar" ? (
           <DashboardCalendarContent />
+        ) : activeNav === "settings" ? (
+          <DashboardSettingsContent
+            userEmail={user?.email}
+            onOpenDocuments={() => setActiveNav("docs")}
+          />
         ) : (
           <DashboardMainContent
             greeting={greeting}
@@ -87,6 +103,7 @@ export function DashboardShell({ user, onLogout }) {
             deadlines={deadlines}
             deadlinesLoading={deadlinesLoading}
             deadlinesError={deadlinesError}
+            onOpenCourses={() => setActiveNav("courses")}
             onOpenDocuments={() => setActiveNav("docs")}
             onOpenCalendar={() => setActiveNav("calendar")}
             onOpenNotion={() => window.open("https://www.notion.so/", "_blank", "noopener,noreferrer")}
