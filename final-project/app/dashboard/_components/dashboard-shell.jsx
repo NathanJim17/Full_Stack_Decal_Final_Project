@@ -7,6 +7,7 @@ import { useDashboardDeadlines } from "../_hooks/use-dashboard-deadlines"
 import { DashboardMainContent } from "./dashboard-main-content"
 import { DashboardSidebar } from "./dashboard-sidebar"
 import { DashboardTopNav } from "./dashboard-top-nav"
+import { DashboardDocumentsContent } from "./documents/documents-content"
 
 function getSemesterInfo(now = new Date()) {
   const year = now.getFullYear()
@@ -33,7 +34,6 @@ function getSemesterInfo(now = new Date()) {
 export function DashboardShell({ user, onLogout }) {
   const [search, setSearch] = useState("")
   const [activeNav, setActiveNav] = useState("dashboard")
-  const [notifOpen, setNotifOpen] = useState(false)
   const [avatarOpen, setAvatarOpen] = useState(false)
 
   const { courses, loading: coursesLoading, error: coursesError } = useDashboardCourses(user?.id)
@@ -65,13 +65,11 @@ export function DashboardShell({ user, onLogout }) {
 
   return (
     <div
-      onClick={() => { setNotifOpen(false); setAvatarOpen(false) }}
+      onClick={() => { setAvatarOpen(false) }}
       style={{ display: "flex", flexDirection: "column", height: "100vh", background: T.bg, overflow: "hidden", fontFamily: "'DM Sans', sans-serif", color: T.text, WebkitFontSmoothing: "antialiased" }}>
       <DashboardTopNav
         search={search}
         setSearch={setSearch}
-        notifOpen={notifOpen}
-        setNotifOpen={setNotifOpen}
         avatarOpen={avatarOpen}
         setAvatarOpen={setAvatarOpen}
         firstName={firstName}
@@ -82,20 +80,24 @@ export function DashboardShell({ user, onLogout }) {
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <DashboardSidebar activeNav={activeNav} setActiveNav={setActiveNav} courses={courses} />
-        <DashboardMainContent
-          greeting={greeting}
-          firstName={firstName}
-          today={today}
-          semesterLabel={`${semester.term} ${semester.year} · Week ${semester.currentWeek} of ${semester.weeksTotal}`}
-          courses={courses}
-          filteredCourses={filteredCourses}
-          search={search}
-          coursesLoading={coursesLoading}
-          coursesError={coursesError}
-          deadlines={deadlines}
-          deadlinesLoading={deadlinesLoading}
-          deadlinesError={deadlinesError}
-        />
+        {activeNav === "docs" ? (
+          <DashboardDocumentsContent courses={courses} userId={user?.id} />
+        ) : (
+          <DashboardMainContent
+            greeting={greeting}
+            firstName={firstName}
+            today={today}
+            semesterLabel={`${semester.term} ${semester.year} · Week ${semester.currentWeek} of ${semester.weeksTotal}`}
+            courses={courses}
+            filteredCourses={filteredCourses}
+            search={search}
+            coursesLoading={coursesLoading}
+            coursesError={coursesError}
+            deadlines={deadlines}
+            deadlinesLoading={deadlinesLoading}
+            deadlinesError={deadlinesError}
+          />
+        )}
       </div>
     </div>
   )
