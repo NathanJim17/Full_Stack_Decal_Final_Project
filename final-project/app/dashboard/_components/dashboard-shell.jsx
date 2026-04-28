@@ -8,6 +8,7 @@ import { DashboardMainContent } from "./dashboard-main-content"
 import { DashboardSidebar } from "./dashboard-sidebar"
 import { DashboardTopNav } from "./dashboard-top-nav"
 import { DashboardDocumentsContent } from "./documents/documents-content"
+import { DashboardCalendarContent } from "./calendar/calendar-content"
 
 function getSemesterInfo(now = new Date()) {
   const year = now.getFullYear()
@@ -82,6 +83,8 @@ export function DashboardShell({ user, onLogout }) {
         <DashboardSidebar activeNav={activeNav} setActiveNav={setActiveNav} courses={courses} />
         {activeNav === "docs" ? (
           <DashboardDocumentsContent courses={courses} userId={user?.id} />
+        ) : activeNav === "calendar" ? (
+          <DashboardCalendarContent />
         ) : (
           <DashboardMainContent
             greeting={greeting}
