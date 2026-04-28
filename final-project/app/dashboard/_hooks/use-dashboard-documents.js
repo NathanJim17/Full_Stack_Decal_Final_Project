@@ -36,6 +36,8 @@ function mapRow(row) {
     name: row.file_name,
     storagePath: row.storage_path,
     courseId: row.course_id,
+    documentType: row.document_type,
+    calendarRelevant: row.calendar_relevant,
     status: formatStatus(row.status),
     updated: formatUpdated(row.updated_at),
     size: formatFileSize(row.file_size_bytes),
@@ -60,7 +62,7 @@ export function useDashboardDocuments(userId) {
 
     const { data, error: dbError } = await supabase
       .from("documents")
-      .select("id, course_id, file_name, storage_path, file_size_bytes, status, extracted_assignments, updated_at")
+      .select("id, course_id, file_name, storage_path, file_size_bytes, document_type, calendar_relevant, status, extracted_assignments, updated_at")
       .eq("user_id", userId)
       .order("updated_at", { ascending: false })
 

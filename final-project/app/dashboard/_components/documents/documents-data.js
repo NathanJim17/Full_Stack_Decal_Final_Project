@@ -2,7 +2,7 @@ export const STATUS_CONFIG = {
   "Uploaded":        { bg: "oklch(0.94 0.04 250)", color: "oklch(0.40 0.12 255)", dot: "oklch(0.55 0.14 255)", icon: "upload"    },
   "Processing":      { bg: "oklch(0.95 0.04 70)",  color: "oklch(0.44 0.12 75)",  dot: "oklch(0.60 0.14 75)",  icon: "loader"    },
   "Ready to review": { bg: "oklch(0.94 0.05 285)", color: "oklch(0.40 0.14 285)", dot: "oklch(0.55 0.16 285)", icon: "eye"       },
-  "Synced":          { bg: "oklch(0.93 0.06 155)", color: "oklch(0.38 0.12 155)", dot: "oklch(0.52 0.14 155)", icon: "check"     },
+  "Synced":          { bg: "oklch(0.94 0.05 285)", color: "oklch(0.40 0.14 285)", dot: "oklch(0.55 0.16 285)", icon: "eye"       },
   "Error":           { bg: "oklch(0.95 0.05 28)",  color: "oklch(0.44 0.16 28)",  dot: "oklch(0.58 0.18 28)",  icon: "alertTri"  },
 }
 
@@ -15,4 +15,4 @@ export const DOCS = [
   { id: 6, name: "EE126_ProblemSets.pdf",    course: null,       status: "Uploaded",         updated: "Apr 27, 2026", size: "1.8 MB", assignments: null },
 ]
 
-export const FILTER_OPTIONS = ["All", "Ready to review", "Synced", "Processing", "Error", "Uploaded"]
+export const FILTER_OPTIONS = ["All", "Processing", "Ready to review", "Error"]

@@ -34,7 +34,6 @@ function getSemesterInfo(now = new Date()) {
 export function DashboardShell({ user, onLogout }) {
   const [search, setSearch] = useState("")
   const [activeNav, setActiveNav] = useState("dashboard")
-  const [notifOpen, setNotifOpen] = useState(false)
   const [avatarOpen, setAvatarOpen] = useState(false)
 
   const { courses, loading: coursesLoading, error: coursesError } = useDashboardCourses(user?.id)
@@ -66,13 +65,11 @@ export function DashboardShell({ user, onLogout }) {
 
   return (
     <div
-      onClick={() => { setNotifOpen(false); setAvatarOpen(false) }}
+      onClick={() => { setAvatarOpen(false) }}
       style={{ display: "flex", flexDirection: "column", height: "100vh", background: T.bg, overflow: "hidden", fontFamily: "'DM Sans', sans-serif", color: T.text, WebkitFontSmoothing: "antialiased" }}>
       <DashboardTopNav
         search={search}
         setSearch={setSearch}
-        notifOpen={notifOpen}
-        setNotifOpen={setNotifOpen}
         avatarOpen={avatarOpen}
         setAvatarOpen={setAvatarOpen}
         firstName={firstName}

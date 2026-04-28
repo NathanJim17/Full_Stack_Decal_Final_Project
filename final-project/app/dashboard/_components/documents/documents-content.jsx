@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Icon } from "../dashboard-icons"
 import { T } from "../../_lib/dashboard-data"
 import { FILTER_OPTIONS } from "./documents-data"
 import { supabase } from "@/lib/supabase"
@@ -10,6 +9,7 @@ import { UploadZone } from "./documents-upload-zone"
 import { LibraryTable } from "./documents-table"
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024
+const CALENDAR_RELEVANT_TYPES = new Set(["syllabus"])
 
 function formatFileSize(bytes) {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
@@ -22,6 +22,7 @@ export function DashboardDocumentsContent({ courses = [], userId }) {
   const [activeFilter, setActiveFilter] = useState("All")
   const [uploadMeta, setUploadMeta] = useState({ name: "", sizeLabel: "" })
   const [uploadError, setUploadError] = useState("")
+  const [documentType, setDocumentType] = useState("syllabus")
 
   async function handleUpload(file) {
     if (!file) return
@@ -68,6 +69,8 @@ export function DashboardDocumentsContent({ courses = [], userId }) {
       mime_type: "application/pdf",
       file_size_bytes: file.size,
       status: "uploaded",
+      document_type: documentType,
+      calendar_relevant: CALENDAR_RELEVANT_TYPES.has(documentType),
     })
 
     if (insertError) {
@@ -132,7 +135,7 @@ export function DashboardDocumentsContent({ courses = [], userId }) {
     <main style={{ flex: 1, overflowY: "auto", padding: "32px 36px" }}>
 
       {/* Page header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
+      <div style={{ marginBottom: 28 }}>
         <div>
           <h1 style={{
             fontSize: 24, fontWeight: 600, color: T.text,
@@ -144,22 +147,6 @@ export function DashboardDocumentsContent({ courses = [], userId }) {
             Upload syllabi, course materials, etc. and we will extract deadlines automatically — then review before syncing to your calendar.
           </p>
         </div>
-        <button
-          onClick={() => document.getElementById("documents-file-input")?.click()}
-          onMouseEnter={e => e.currentTarget.style.opacity = "0.88"}
-          onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 7,
-            padding: "10px 20px", borderRadius: 99, border: "none",
-            background: T.accent, color: "#fff",
-            fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13.5,
-            cursor: "pointer", flexShrink: 0,
-            boxShadow: `0 2px 10px oklch(0.50 0.18 285 / 0.30)`,
-            transition: "all 0.15s",
-          }}>
-          <Icon name="upload" size={15} color="#fff" />
-          Upload syllabus
-        </button>
       </div>
 
       {/* Upload zone */}
@@ -167,6 +154,8 @@ export function DashboardDocumentsContent({ courses = [], userId }) {
         state={uploadState}
         onStateChange={setUploadState}
         onFileSelected={handleUpload}
+        documentType={documentType}
+        onDocumentTypeChange={setDocumentType}
         uploadFileName={uploadMeta.name}
         uploadFileSize={uploadMeta.sizeLabel}
         errorMessage={uploadError}

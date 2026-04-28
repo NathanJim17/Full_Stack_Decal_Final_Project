@@ -8,6 +8,8 @@ export function UploadZone({
   state,
   onStateChange,
   onFileSelected,
+  documentType,
+  onDocumentTypeChange,
   uploadFileName,
   uploadFileSize,
   errorMessage,
@@ -46,6 +48,36 @@ export function UploadZone({
 
   return (
     <div style={{ marginBottom: 28 }}>
+      {state === "idle" && (
+        <div style={{ width: "100%", maxWidth: 360, marginBottom: 10 }}>
+          <label
+            htmlFor="documents-type-select"
+            style={{ display: "block", fontSize: 12, color: T.muted, marginBottom: 6 }}>
+            Document type
+          </label>
+          <select
+            id="documents-type-select"
+            value={documentType}
+            onChange={(e) => onDocumentTypeChange?.(e.target.value)}
+            style={{
+              width: "100%",
+              fontSize: 12.5,
+              color: T.text,
+              background: T.surface,
+              border: `1.5px solid ${T.borderSub}`,
+              borderRadius: 10,
+              padding: "8px 10px",
+              fontFamily: "'DM Sans', sans-serif",
+              cursor: "pointer",
+            }}>
+            <option value="syllabus">Syllabus (calendar-relevant)</option>
+            <option value="course_material">Course material</option>
+            <option value="textbook">Textbook</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      )}
+
       <div
         onDragOver={e => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}

@@ -1,15 +1,12 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { NOTIFICATIONS, T, cardStyle } from "../_lib/dashboard-data"
+import { T, cardStyle } from "../_lib/dashboard-data"
 import { Icon } from "./dashboard-icons"
 
 export function DashboardTopNav({
   search,
   setSearch,
-  notifOpen,
-  setNotifOpen,
   avatarOpen,
   setAvatarOpen,
   firstName,
@@ -41,35 +38,8 @@ export function DashboardTopNav({
       <div style={{ flex: 1 }} />
 
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <Button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", border: "none", borderRadius: 99, background: T.accent, color: "#fff", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, boxShadow: `0 2px 8px oklch(0.50 0.18 285 / 0.28)`, whiteSpace: "nowrap" }}>
-          <Icon name="plus" size={14} color="#fff" /> New Document
-        </Button>
-
         <div style={{ position: "relative" }} onClick={(e) => e.stopPropagation()}>
-          <Button variant="outline" size="icon-sm" onClick={() => { setNotifOpen((o) => !o); setAvatarOpen(false) }} style={{ width: 36, height: 36, borderRadius: 99, position: "relative", background: notifOpen ? T.accentBg : T.surface2, border: `1.5px solid ${notifOpen ? T.accent : T.borderSub}` }}>
-            <Icon name="bell" size={15} color={notifOpen ? T.accent : T.faint} />
-            <span style={{ position: "absolute", top: 6, right: 6, width: 7, height: 7, borderRadius: "50%", background: "oklch(0.60 0.18 28)", border: `2px solid ${T.surface}` }} />
-          </Button>
-          {notifOpen && (
-            <div style={{ position: "absolute", top: 44, right: 0, width: 280, ...cardStyle({ padding: "12px 0", zIndex: 100 }), animation: "fadeUp 0.15s ease" }}>
-              <div style={{ padding: "4px 16px 10px", fontSize: 12, fontWeight: 600, color: T.muted, borderBottom: `1px solid ${T.borderSub}` }}>Notifications</div>
-              {NOTIFICATIONS.map((n, i) => (
-                <div key={n.msg} style={{ display: "flex", gap: 10, padding: "10px 16px", alignItems: "flex-start", borderBottom: i < NOTIFICATIONS.length - 1 ? `1px solid ${T.borderSub}` : "none" }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 7, background: T.accentBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Icon name={n.icon} size={13} color={T.accent} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 12, color: T.text, fontWeight: 500 }}>{n.msg}</div>
-                    <div style={{ fontSize: 11, color: T.faint, marginTop: 2 }}>{n.time}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div style={{ position: "relative" }} onClick={(e) => e.stopPropagation()}>
-          <button onClick={() => { setAvatarOpen((o) => !o); setNotifOpen(false) }} style={{ width: 34, height: 34, borderRadius: "50%", background: "oklch(0.88 0.06 285)", border: `2px solid ${avatarOpen ? T.accent : T.border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "border-color 0.15s" }}>
+          <button onClick={() => { setAvatarOpen((o) => !o) }} style={{ width: 34, height: 34, borderRadius: "50%", background: "oklch(0.88 0.06 285)", border: `2px solid ${avatarOpen ? T.accent : T.border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "border-color 0.15s" }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: T.accent }}>{initial}</span>
           </button>
           {avatarOpen && (
