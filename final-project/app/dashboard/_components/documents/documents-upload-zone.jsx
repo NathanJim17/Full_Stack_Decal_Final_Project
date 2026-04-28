@@ -1,16 +1,23 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useRef, useState, useEffect } from "react"
 import { Icon } from "../dashboard-icons"
 import { T } from "../../_lib/dashboard-data"
 
-export function UploadZone({ state, onStateChange }) {
+export function UploadZone({
+  state,
+  onStateChange,
+  onFileSelected,
+  uploadFileName,
+  uploadFileSize,
+  errorMessage,
+}) {
   const [dragging, setDragging] = useState(false)
   const [progress, setProgress] = useState(0)
+  const inputRef = useRef(null)
 
   useEffect(() => {
     if (state !== "uploading") return
-    setProgress(0)
     const t = setInterval(() => {
       setProgress(p => {
         if (p >= 88) { clearInterval(t); return 88 }
@@ -29,13 +36,25 @@ export function UploadZone({ state, onStateChange }) {
                 : dragging                ? "oklch(0.97 0.03 285)"
                 : T.surface
 
+  const errorLabel = errorMessage || "Upload failed. Please try again."
+
+  function pickFirstFile(fileList) {
+    if (!fileList || fileList.length === 0) return
+    setProgress(0)
+    onFileSelected?.(fileList[0])
+  }
+
   return (
     <div style={{ marginBottom: 28 }}>
       <div
         onDragOver={e => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}
-        onDrop={e => { e.preventDefault(); setDragging(false); onStateChange("uploading") }}
-        onClick={() => state === "idle" && onStateChange("uploading")}
+        onDrop={e => {
+          e.preventDefault()
+          setDragging(false)
+          pickFirstFile(e.dataTransfer.files)
+        }}
+        onClick={() => state === "idle" && inputRef.current?.click()}
         style={{
           border: `2px dashed ${borderColor}`,
           borderRadius: 14,
@@ -45,6 +64,17 @@ export function UploadZone({ state, onStateChange }) {
           gap: 10, transition: "all 0.2s ease", cursor: "pointer",
           position: "relative", overflow: "hidden",
         }}>
+        <input
+          ref={inputRef}
+          id="documents-file-input"
+          type="file"
+          accept="application/pdf"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            pickFirstFile(e.target.files)
+            e.target.value = ""
+          }}
+        />
 
         {state === "idle" && (
           <>
@@ -73,7 +103,7 @@ export function UploadZone({ state, onStateChange }) {
               padding: "4px 12px", borderRadius: 99,
             }}>
               <Icon name="fileText" size={12} color={T.faint} />
-              PDF only · max 20 MB per file
+              PDF only · max 50 MB per file
             </div>
           </>
         )}
@@ -89,9 +119,9 @@ export function UploadZone({ state, onStateChange }) {
               </div>
               <div style={{ flex: 1, textAlign: "left" }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 2 }}>
-                  CS189_Syllabus_SP26.pdf
+                  {uploadFileName || "Uploading document.pdf"}
                 </div>
-                <div style={{ fontSize: 11.5, color: T.muted }}>1.2 MB · Uploading…</div>
+                <div style={{ fontSize: 11.5, color: T.muted }}>{uploadFileSize || "—"} · Uploading…</div>
               </div>
               <button
                 onClick={e => { e.stopPropagation(); onStateChange("idle") }}
@@ -122,7 +152,7 @@ export function UploadZone({ state, onStateChange }) {
                 Upload failed
               </div>
               <div style={{ fontSize: 12.5, color: "oklch(0.48 0.10 28)", marginBottom: 10 }}>
-                CS189_Broken.pdf · File exceeds 20 MB limit
+                {errorLabel}
               </div>
               <button
                 onClick={e => { e.stopPropagation(); onStateChange("idle") }}

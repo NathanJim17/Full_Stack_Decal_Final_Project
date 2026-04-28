@@ -84,7 +84,7 @@ export function DashboardShell({ user, onLogout }) {
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <DashboardSidebar activeNav={activeNav} setActiveNav={setActiveNav} courses={courses} />
         {activeNav === "docs" ? (
-          <DashboardDocumentsContent courses={courses} />
+          <DashboardDocumentsContent courses={courses} userId={user?.id} />
         ) : (
           <DashboardMainContent
             greeting={greeting}

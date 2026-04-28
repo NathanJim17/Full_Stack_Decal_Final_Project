@@ -3,22 +3,116 @@
 import { useState } from "react"
 import { Icon } from "../dashboard-icons"
 import { T } from "../../_lib/dashboard-data"
-import { DOCS, FILTER_OPTIONS } from "./documents-data"
+import { FILTER_OPTIONS } from "./documents-data"
+import { supabase } from "@/lib/supabase"
+import { useDashboardDocuments } from "../../_hooks/use-dashboard-documents"
 import { UploadZone } from "./documents-upload-zone"
 import { LibraryTable } from "./documents-table"
 
-export function DashboardDocumentsContent({ courses = [] }) {
-  const [docs, setDocs] = useState(DOCS)
+const MAX_FILE_BYTES = 50 * 1024 * 1024
+
+function formatFileSize(bytes) {
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+export function DashboardDocumentsContent({ courses = [], userId }) {
+  const { docs, loading, error, reload } = useDashboardDocuments(userId)
   const [uploadState, setUploadState] = useState("idle")
   const [activeFilter, setActiveFilter] = useState("All")
+  const [uploadMeta, setUploadMeta] = useState({ name: "", sizeLabel: "" })
+  const [uploadError, setUploadError] = useState("")
 
-  const handleDelete = id => setDocs(d => d.filter(r => r.id !== id))
+  async function handleUpload(file) {
+    if (!file) return
+    if (!userId) {
+      setUploadError("You must be logged in to upload.")
+      setUploadState("error")
+      return
+    }
+    if (file.type !== "application/pdf") {
+      setUploadError(`${file.name} · Only PDF files are allowed`)
+      setUploadState("error")
+      return
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      setUploadError(`${file.name} · File exceeds 50 MB limit`)
+      setUploadState("error")
+      return
+    }
+
+    setUploadMeta({ name: file.name, sizeLabel: formatFileSize(file.size) })
+    setUploadError("")
+    setUploadState("uploading")
+
+    const docId = crypto.randomUUID()
+    const lowerName = file.name.toLowerCase()
+    const ext = lowerName.endsWith(".pdf") ? "pdf" : lowerName.split(".").pop() || "pdf"
+    const storagePath = `${userId}/${docId}.${ext}`
+
+    const { error: uploadDbError } = await supabase.storage
+      .from("documents")
+      .upload(storagePath, file, { upsert: false, contentType: "application/pdf" })
+
+    if (uploadDbError) {
+      setUploadError(`${file.name} · ${uploadDbError.message}`)
+      setUploadState("error")
+      return
+    }
+
+    const { error: insertError } = await supabase.from("documents").insert({
+      id: docId,
+      user_id: userId,
+      file_name: file.name,
+      storage_path: storagePath,
+      mime_type: "application/pdf",
+      file_size_bytes: file.size,
+      status: "uploaded",
+    })
+
+    if (insertError) {
+      await supabase.storage.from("documents").remove([storagePath])
+      setUploadError(`${file.name} · ${insertError.message}`)
+      setUploadState("error")
+      return
+    }
+
+    setUploadState("idle")
+    setUploadMeta({ name: "", sizeLabel: "" })
+    await reload()
+  }
+
+  async function handleDelete(id) {
+    const doc = docs.find((row) => row.id === id)
+    if (!doc) return
+
+    const { error: deleteError } = await supabase
+      .from("documents")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId)
+
+    if (deleteError) {
+      await reload()
+      return
+    }
+    if (doc.storagePath) {
+      await supabase.storage.from("documents").remove([doc.storagePath])
+    }
+    await reload()
+  }
 
   const filteredDocs = activeFilter === "All"
     ? docs
     : docs.filter(d => d.status === activeFilter)
 
-  const libraryState = docs.length === 0 ? "empty" : "populated"
+  const libraryState = error
+    ? "error"
+    : loading
+      ? "loading"
+      : docs.length === 0
+        ? "empty"
+        : "populated"
 
   return (
     <main style={{ flex: 1, overflowY: "auto", padding: "32px 36px" }}>
@@ -33,11 +127,11 @@ export function DashboardDocumentsContent({ courses = [] }) {
             Documents
           </h1>
           <p style={{ fontSize: 13.5, color: T.muted, maxWidth: 480 }}>
-            Upload syllabi and we'll extract deadlines automatically — then review before syncing to your calendar.
+            Upload syllabi, course materials, etc. and we will extract deadlines automatically — then review before syncing to your calendar.
           </p>
         </div>
         <button
-          onClick={() => setUploadState("uploading")}
+          onClick={() => document.getElementById("documents-file-input")?.click()}
           onMouseEnter={e => e.currentTarget.style.opacity = "0.88"}
           onMouseLeave={e => e.currentTarget.style.opacity = "1"}
           style={{
@@ -55,7 +149,14 @@ export function DashboardDocumentsContent({ courses = [] }) {
       </div>
 
       {/* Upload zone */}
-      <UploadZone state={uploadState} onStateChange={setUploadState} />
+      <UploadZone
+        state={uploadState}
+        onStateChange={setUploadState}
+        onFileSelected={handleUpload}
+        uploadFileName={uploadMeta.name}
+        uploadFileSize={uploadMeta.sizeLabel}
+        errorMessage={uploadError}
+      />
 
       {/* Library section header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
@@ -98,10 +199,14 @@ export function DashboardDocumentsContent({ courses = [] }) {
 
       {/* Table */}
       <LibraryTable
-        state={filteredDocs.length === 0 && activeFilter !== "All" ? "empty" : libraryState}
+        state={libraryState === "loading" || libraryState === "error"
+          ? libraryState
+          : filteredDocs.length === 0 && activeFilter !== "All"
+            ? "empty"
+            : libraryState}
         docs={filteredDocs}
         courses={courses}
-        onDelete={handleDelete}
+        onDelete={(id) => { void handleDelete(id) }}
       />
     </main>
   )
