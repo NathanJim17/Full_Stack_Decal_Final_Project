@@ -87,7 +87,10 @@ export function DashboardShell({ user, onLogout }) {
         ) : activeNav === "settings" ? (
           <DashboardSettingsContent
             userEmail={user?.email}
+            onLogout={onLogout}
             onOpenDocuments={() => setActiveNav("docs")}
+            onOpenCalendar={() => setActiveNav("calendar")}
+            onOpenNotion={() => window.open("https://www.notion.so/", "_blank", "noopener,noreferrer")}
           />
         ) : (
           <DashboardMainContent
