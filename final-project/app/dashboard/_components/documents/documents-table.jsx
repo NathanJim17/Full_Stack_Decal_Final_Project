@@ -52,6 +52,12 @@ export function DocRow({ doc, index, courses, onDelete, onAssignCourse, onRetryP
   const canReview    = doc.status === "Ready to review"
   const hasError     = doc.status === "Error"
   const isProcessing = doc.status === "Processing"
+  const documentTypeLabel = doc.documentType
+    ? doc.documentType
+        .split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ")
+    : null
 
   const handleDelete = () => {
     setDeleted(true)
@@ -91,6 +97,22 @@ export function DocRow({ doc, index, courses, onDelete, onAssignCourse, onRetryP
             <div style={{ fontSize: 13, fontWeight: 500, color: T.text }}>{doc.name}</div>
             <div style={{ fontSize: 11, color: T.faint, marginTop: 1 }}>
               {doc.size}
+              {documentTypeLabel && (
+                <span
+                  style={{
+                    marginLeft: 8,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    padding: "2px 7px",
+                    borderRadius: 99,
+                    background: T.surface2,
+                    border: `1px solid ${T.borderSub}`,
+                    color: T.muted,
+                    fontWeight: 600,
+                  }}>
+                  {documentTypeLabel}
+                </span>
+              )}
               {doc.assignments && (
                 <span style={{ marginLeft: 8, color: T.accent, fontWeight: 500 }}>· {doc.assignments} assignments found</span>
               )}
@@ -156,20 +178,6 @@ export function DocRow({ doc, index, courses, onDelete, onAssignCourse, onRetryP
             </button>
           )}
 
-          {!canReview && !hasError && (
-            <button
-              title="Open document"
-              onMouseEnter={e => { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.background = T.accentBg; e.currentTarget.style.color = T.accent }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = T.borderSub; e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = T.faint }}
-              style={{
-                width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${T.borderSub}`,
-                background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "all 0.15s", color: T.faint,
-              }}>
-              <Icon name="eye" size={14} />
-            </button>
-          )}
-
           {hasError && (
             <button
               title="Retry extraction"
@@ -201,7 +209,7 @@ export function DocRow({ doc, index, courses, onDelete, onAssignCourse, onRetryP
   )
 }
 
-export function LibraryTable({ state, docs, courses, onDelete, onAssignCourse, onRetryParse }) {
+export function LibraryTable({ state, docs, courses, onDelete, onAssignCourse, onRetryParse, onReload, onJumpToUpload }) {
   if (state === "error") {
     return (
       <div style={cardStyle({ padding: "40px 24px", textAlign: "center" })}>
@@ -213,12 +221,14 @@ export function LibraryTable({ state, docs, courses, onDelete, onAssignCourse, o
         </div>
         <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 5 }}>Failed to load documents</div>
         <div style={{ fontSize: 12.5, color: T.muted, marginBottom: 16 }}>Check your connection and try again.</div>
-        <button style={{
-          display: "inline-flex", alignItems: "center", gap: 6,
-          padding: "8px 18px", borderRadius: 99, border: `1.5px solid ${T.border}`,
-          background: T.surface2, color: T.muted,
-          fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer",
-        }}>
+        <button
+          onClick={() => onReload?.()}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "8px 18px", borderRadius: 99, border: `1.5px solid ${T.border}`,
+            background: T.surface2, color: T.muted,
+            fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer",
+          }}>
           <Icon name="refresh" size={13} color={T.faint} /> Retry
         </button>
       </div>
@@ -245,13 +255,15 @@ export function LibraryTable({ state, docs, courses, onDelete, onAssignCourse, o
         <div style={{ fontSize: 13, color: T.muted, maxWidth: 320, margin: "0 auto 20px" }}>
           Upload a document above to get started. We will process it and prepare it for review.
         </div>
-        <button style={{
-          display: "inline-flex", alignItems: "center", gap: 7,
-          padding: "9px 20px", borderRadius: 99, border: "none",
-          background: T.accent, color: "#fff",
-          fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer",
-          boxShadow: `0 2px 8px oklch(0.50 0.18 285 / 0.28)`,
-        }}>
+        <button
+          onClick={() => onJumpToUpload?.()}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 7,
+            padding: "9px 20px", borderRadius: 99, border: "none",
+            background: T.accent, color: "#fff",
+            fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer",
+            boxShadow: `0 2px 8px oklch(0.50 0.18 285 / 0.28)`,
+          }}>
           <Icon name="upload" size={14} color="#fff" /> Upload your first document
         </button>
       </div>

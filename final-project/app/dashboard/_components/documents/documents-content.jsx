@@ -237,6 +237,8 @@ export function DashboardDocumentsContent({ courses = [], userId }) {
         onDelete={(id) => { void handleDelete(id) }}
         onAssignCourse={(docId, courseId) => handleAssignCourse(docId, courseId)}
         onRetryParse={(documentId) => handleRetryParse(documentId)}
+        onReload={() => { void reload() }}
+        onJumpToUpload={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       />
     </main>
   )

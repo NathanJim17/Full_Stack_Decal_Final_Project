@@ -18,6 +18,8 @@ export function DashboardMainContent({
   deadlines = [],
   deadlinesLoading = false,
   deadlinesError = null,
+  onOpenCourses,
+  onOpenCourse,
   onOpenDocuments,
   onOpenCalendar,
   onOpenNotion,
@@ -93,7 +95,7 @@ export function DashboardMainContent({
         <div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <h2 style={{ fontSize: 15, fontWeight: 600, color: T.text, fontFamily: "'Lora', serif" }}>Active Classes</h2>
-            <Button variant="outline" size="sm" style={btnGhostStyle}>
+            <Button variant="outline" size="sm" style={btnGhostStyle} onClick={() => onOpenCourses?.()}>
               View all <Icon name="arrowRight" size={11} color="currentColor" />
             </Button>
           </div>
@@ -112,7 +114,14 @@ export function DashboardMainContent({
               <p style={{ marginTop: 10, fontSize: 13, color: T.faint }}>No courses match &ldquo;{search}&rdquo;</p>
             </div>
           ) : (
-            filteredCourses.map((c) => <CourseCard key={c.id} course={c} onUploadDocument={onOpenDocuments} />)
+            filteredCourses.map((c) => (
+              <CourseCard
+                key={c.id}
+                course={c}
+                onUploadDocument={onOpenDocuments}
+                onOpenCourse={onOpenCourse}
+              />
+            ))
           )}
         </div>
 
