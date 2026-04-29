@@ -8,6 +8,7 @@ import { DashboardMainContent } from "./dashboard-main-content"
 import { DashboardSidebar } from "./dashboard-sidebar"
 import { DashboardTopNav } from "./dashboard-top-nav"
 import { DashboardDocumentsContent } from "./documents/documents-content"
+import { DashboardCalendarContent } from "./calendar/calendar-content"
 
 function getSemesterInfo(now = new Date()) {
   const year = now.getFullYear()
@@ -51,18 +52,6 @@ export function DashboardShell({ user, onLogout }) {
     (c) => !search || c.code.toLowerCase().includes(search.toLowerCase()) || c.name.toLowerCase().includes(search.toLowerCase())
   )
 
-  // Temporary debug logs to verify auth user + fetched dashboard data.
-  console.log("dashboard user id:", user?.id)
-  console.log(
-    "dashboard data:",
-    JSON.stringify({
-      coursesCount: courses.length,
-      deadlinesCount: deadlines.length,
-      coursesError,
-      deadlinesError,
-    })
-  )
-
   return (
     <div
       onClick={() => { setAvatarOpen(false) }}
@@ -82,6 +71,8 @@ export function DashboardShell({ user, onLogout }) {
         <DashboardSidebar activeNav={activeNav} setActiveNav={setActiveNav} courses={courses} />
         {activeNav === "docs" ? (
           <DashboardDocumentsContent courses={courses} userId={user?.id} />
+        ) : activeNav === "calendar" ? (
+          <DashboardCalendarContent />
         ) : (
           <DashboardMainContent
             greeting={greeting}
@@ -96,6 +87,9 @@ export function DashboardShell({ user, onLogout }) {
             deadlines={deadlines}
             deadlinesLoading={deadlinesLoading}
             deadlinesError={deadlinesError}
+            onOpenDocuments={() => setActiveNav("docs")}
+            onOpenCalendar={() => setActiveNav("calendar")}
+            onOpenNotion={() => window.open("https://www.notion.so/", "_blank", "noopener,noreferrer")}
           />
         )}
       </div>

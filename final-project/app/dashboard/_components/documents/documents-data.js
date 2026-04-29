@@ -6,13 +6,4 @@ export const STATUS_CONFIG = {
   "Error":           { bg: "oklch(0.95 0.05 28)",  color: "oklch(0.44 0.16 28)",  dot: "oklch(0.58 0.18 28)",  icon: "alertTri"  },
 }
 
-export const DOCS = [
-  { id: 1, name: "CS189_Syllabus_SP26.pdf",  course: "CS 189",   status: "Ready to review", updated: "Apr 26, 2026", size: "1.2 MB", assignments: 12   },
-  { id: 2, name: "EE126_Course_Info.pdf",    course: "EE 126",   status: "Synced",           updated: "Apr 25, 2026", size: "840 KB", assignments: 8    },
-  { id: 3, name: "CS162_Syllabus.pdf",       course: "CS 162",   status: "Processing",       updated: "Apr 27, 2026", size: "2.1 MB", assignments: null },
-  { id: 4, name: "EECS127_Spring2026.pdf",   course: "EECS 127", status: "Synced",           updated: "Apr 20, 2026", size: "610 KB", assignments: 10   },
-  { id: 5, name: "CS189_Lab_Schedule.pdf",   course: "CS 189",   status: "Error",            updated: "Apr 27, 2026", size: "320 KB", assignments: null },
-  { id: 6, name: "EE126_ProblemSets.pdf",    course: null,       status: "Uploaded",         updated: "Apr 27, 2026", size: "1.8 MB", assignments: null },
-]
-
 export const FILTER_OPTIONS = ["All", "Processing", "Ready to review", "Error"]

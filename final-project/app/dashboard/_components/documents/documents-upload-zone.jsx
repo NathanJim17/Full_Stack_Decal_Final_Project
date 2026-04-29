@@ -119,7 +119,7 @@ export function UploadZone({
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 14.5, fontWeight: 600, color: T.text, marginBottom: 4 }}>
-                Drop your syllabus PDF here
+                Drop your document PDF here
               </div>
               <div style={{ fontSize: 13, color: T.muted }}>
                 or{" "}

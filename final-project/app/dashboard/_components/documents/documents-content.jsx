@@ -24,6 +24,22 @@ export function DashboardDocumentsContent({ courses = [], userId }) {
   const [uploadError, setUploadError] = useState("")
   const [documentType, setDocumentType] = useState("syllabus")
 
+  async function triggerParse(documentId) {
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
+    if (!token) return false
+
+    const response = await fetch("/api/documents/parse", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ documentId }),
+    })
+    return response.ok
+  }
+
   async function handleUpload(file) {
     if (!file) return
     if (!userId) {
@@ -68,7 +84,7 @@ export function DashboardDocumentsContent({ courses = [], userId }) {
       storage_path: storagePath,
       mime_type: "application/pdf",
       file_size_bytes: file.size,
-      status: "uploaded",
+      status: "processing",
       document_type: documentType,
       calendar_relevant: CALENDAR_RELEVANT_TYPES.has(documentType),
     })
@@ -83,6 +99,9 @@ export function DashboardDocumentsContent({ courses = [], userId }) {
     setUploadState("idle")
     setUploadMeta({ name: "", sizeLabel: "" })
     await reload()
+    void triggerParse(docId).finally(() => {
+      void reload()
+    })
   }
 
   async function handleDelete(id) {
@@ -119,6 +138,12 @@ export function DashboardDocumentsContent({ courses = [], userId }) {
     return true
   }
 
+  async function handleRetryParse(documentId) {
+    const ok = await triggerParse(documentId)
+    await reload()
+    return ok
+  }
+
   const filteredDocs = activeFilter === "All"
     ? docs
     : docs.filter(d => d.status === activeFilter)
@@ -135,7 +160,7 @@ export function DashboardDocumentsContent({ courses = [], userId }) {
     <main style={{ flex: 1, overflowY: "auto", padding: "32px 36px" }}>
 
       {/* Page header */}
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 10 }}>
         <div>
           <h1 style={{
             fontSize: 24, fontWeight: 600, color: T.text,
@@ -143,7 +168,7 @@ export function DashboardDocumentsContent({ courses = [], userId }) {
           }}>
             Documents
           </h1>
-          <p style={{ fontSize: 13.5, color: T.muted, maxWidth: 480 }}>
+          <p style={{ fontSize: 13.5, color: T.muted, maxWidth: 760 }}>
             Upload syllabi, course materials, etc. and we will extract deadlines automatically — then review before syncing to your calendar.
           </p>
         </div>
@@ -211,6 +236,7 @@ export function DashboardDocumentsContent({ courses = [], userId }) {
         courses={courses}
         onDelete={(id) => { void handleDelete(id) }}
         onAssignCourse={(docId, courseId) => handleAssignCourse(docId, courseId)}
+        onRetryParse={(documentId) => handleRetryParse(documentId)}
       />
     </main>
   )

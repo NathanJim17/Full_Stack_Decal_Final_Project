@@ -18,6 +18,9 @@ export function DashboardMainContent({
   deadlines = [],
   deadlinesLoading = false,
   deadlinesError = null,
+  onOpenDocuments,
+  onOpenCalendar,
+  onOpenNotion,
 }) {
   const upcomingTasks = deadlines.filter((d) => d.daysLeft > 0).length
   const dueThisWeek = deadlines.filter((d) => d.daysLeft <= 7).length
@@ -109,7 +112,7 @@ export function DashboardMainContent({
               <p style={{ marginTop: 10, fontSize: 13, color: T.faint }}>No courses match &ldquo;{search}&rdquo;</p>
             </div>
           ) : (
-            filteredCourses.map((c) => <CourseCard key={c.id} course={c} />)
+            filteredCourses.map((c) => <CourseCard key={c.id} course={c} onUploadDocument={onOpenDocuments} />)
           )}
         </div>
 
@@ -139,6 +142,12 @@ export function DashboardMainContent({
               <Button
                 key={a.label}
                 variant="outline"
+                onClick={() => {
+                  if (a.label === "Upload Document") onOpenDocuments?.()
+                  if (a.label === "Re-extract in Documents") onOpenDocuments?.()
+                  if (a.label === "View Calendar") onOpenCalendar?.()
+                  if (a.label === "Open Notion") onOpenNotion?.()
+                }}
                 style={{ ...cardStyle({ padding: "14px", border: `1.5px solid ${T.borderSub}` }), textAlign: "left", display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-start", gap: 10, fontFamily: "'DM Sans', sans-serif", minHeight: 72 }}>
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: a.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Icon name={a.icon} size={15} color={a.ac} />

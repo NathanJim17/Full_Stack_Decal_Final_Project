@@ -110,9 +110,9 @@ export const NOTIFICATIONS = [
 ]
 
 export const QUICK_ACTIONS = [
-  { icon: "upload", label: "Upload Syllabus", desc: "Parse new doc", ac: T.accent, bg: T.accentBg },
-  { icon: "link", label: "Connect Notion", desc: "Sync workspace", ac: "oklch(0.45 0.14 250)", bg: "oklch(0.95 0.04 250)" },
-  { icon: "sparkles", label: "Re-Extract", desc: "Re-run AI parse", ac: "oklch(0.52 0.16 45)", bg: "oklch(0.95 0.04 45)" },
+  { icon: "upload", label: "Upload Document", desc: "Process new document", ac: T.accent, bg: T.accentBg },
+  { icon: "link", label: "Open Notion", desc: "Open workspace", ac: "oklch(0.45 0.14 250)", bg: "oklch(0.95 0.04 250)" },
+  { icon: "sparkles", label: "Re-extract in Documents", desc: "Retry parsing from docs", ac: "oklch(0.52 0.16 45)", bg: "oklch(0.95 0.04 45)" },
   { icon: "calendar", label: "View Calendar", desc: "See all events", ac: "oklch(0.52 0.16 155)", bg: "oklch(0.95 0.04 155)" },
 ]
 

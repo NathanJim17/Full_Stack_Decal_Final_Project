@@ -31,11 +31,12 @@ export function SkeletonRow({ i }) {
   )
 }
 
-export function DocRow({ doc, index, courses, onDelete, onAssignCourse }) {
+export function DocRow({ doc, index, courses, onDelete, onAssignCourse, onRetryParse }) {
   const [hovered, setHovered] = useState(false)
   const [courseVal, setCourseVal] = useState(doc.courseId || "")
   const [deleted, setDeleted] = useState(false)
   const [savingCourse, setSavingCourse] = useState(false)
+  const [retrying, setRetrying] = useState(false)
 
   async function handleCourseChange(nextCourseId) {
     const prev = courseVal
@@ -55,6 +56,12 @@ export function DocRow({ doc, index, courses, onDelete, onAssignCourse }) {
   const handleDelete = () => {
     setDeleted(true)
     setTimeout(() => onDelete(doc.id), 280)
+  }
+
+  async function handleRetry() {
+    setRetrying(true)
+    await onRetryParse?.(doc.id)
+    setRetrying(false)
   }
 
   return (
@@ -166,12 +173,13 @@ export function DocRow({ doc, index, courses, onDelete, onAssignCourse }) {
           {hasError && (
             <button
               title="Retry extraction"
+              onClick={() => { void handleRetry() }}
               style={{
                 width: 32, height: 32, borderRadius: 8, border: `1.5px solid oklch(0.82 0.08 28)`,
-                background: "oklch(0.97 0.03 28)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "all 0.15s", color: "oklch(0.52 0.16 28)",
+                background: "oklch(0.97 0.03 28)", cursor: retrying ? "wait" : "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "all 0.15s", color: "oklch(0.52 0.16 28)", opacity: retrying ? 0.7 : 1,
               }}>
-              <Icon name="refresh" size={14} />
+              <Icon name={retrying ? "loader" : "refresh"} size={14} style={retrying ? { animation: "spin 1.2s linear infinite" } : {}} />
             </button>
           )}
 
@@ -193,7 +201,7 @@ export function DocRow({ doc, index, courses, onDelete, onAssignCourse }) {
   )
 }
 
-export function LibraryTable({ state, docs, courses, onDelete, onAssignCourse }) {
+export function LibraryTable({ state, docs, courses, onDelete, onAssignCourse, onRetryParse }) {
   if (state === "error") {
     return (
       <div style={cardStyle({ padding: "40px 24px", textAlign: "center" })}>
@@ -235,7 +243,7 @@ export function LibraryTable({ state, docs, courses, onDelete, onAssignCourse })
           No documents yet
         </div>
         <div style={{ fontSize: 13, color: T.muted, maxWidth: 320, margin: "0 auto 20px" }}>
-          Upload a syllabus above to get started. We'll extract all your deadlines automatically.
+          Upload a document above to get started. We will process it and prepare it for review.
         </div>
         <button style={{
           display: "inline-flex", alignItems: "center", gap: 7,
@@ -244,7 +252,7 @@ export function LibraryTable({ state, docs, courses, onDelete, onAssignCourse })
           fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer",
           boxShadow: `0 2px 8px oklch(0.50 0.18 285 / 0.28)`,
         }}>
-          <Icon name="upload" size={14} color="#fff" /> Upload your first syllabus
+          <Icon name="upload" size={14} color="#fff" /> Upload your first document
         </button>
       </div>
     )
@@ -273,6 +281,7 @@ export function LibraryTable({ state, docs, courses, onDelete, onAssignCourse })
                   courses={courses}
                   onDelete={onDelete}
                   onAssignCourse={onAssignCourse}
+                  onRetryParse={onRetryParse}
                 />
               ))
           }
@@ -281,21 +290,13 @@ export function LibraryTable({ state, docs, courses, onDelete, onAssignCourse })
 
       {state === "populated" && docs.length > 0 && (
         <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
+          display: "flex", alignItems: "center", justifyContent: "flex-start",
           padding: "10px 16px",
           borderTop: `1px solid ${T.borderSub}`,
           background: T.surface2,
         }}>
           <span style={{ fontSize: 11.5, color: T.faint }}>
             {docs.length} document{docs.length !== 1 ? "s" : ""}
-          </span>
-          <span style={{ fontSize: 11.5, color: T.faint, display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <span style={{
-              width: 6, height: 6, borderRadius: "50%",
-              background: "oklch(0.52 0.14 155)", display: "inline-block",
-              animation: "pulse 2.5s ease-in-out infinite",
-            }} />
-            Syncing to Google Calendar
           </span>
         </div>
       )}
