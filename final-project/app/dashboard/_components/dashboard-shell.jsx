@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { T } from "../_lib/dashboard-data"
 import { useDashboardCourses } from "../_hooks/use-dashboard-courses"
 import { useDashboardDeadlines } from "../_hooks/use-dashboard-deadlines"
@@ -9,6 +10,8 @@ import { DashboardSidebar } from "./dashboard-sidebar"
 import { DashboardTopNav } from "./dashboard-top-nav"
 import { DashboardDocumentsContent } from "./documents/documents-content"
 import { DashboardCalendarContent } from "./calendar/calendar-content"
+import { DashboardCoursesContent } from "./courses/courses-content"
+import { DashboardSettingsContent } from "./settings/settings-content"
 
 function getSemesterInfo(now = new Date()) {
   const year = now.getFullYear()
@@ -36,8 +39,10 @@ export function DashboardShell({ user, onLogout }) {
   const [search, setSearch] = useState("")
   const [activeNav, setActiveNav] = useState("dashboard")
   const [avatarOpen, setAvatarOpen] = useState(false)
+  const router = useRouter()
+  const searchParams = useSearchParams()
 
-  const { courses, loading: coursesLoading, error: coursesError } = useDashboardCourses(user?.id)
+  const { courses, loading: coursesLoading, error: coursesError, createCourse } = useDashboardCourses(user?.id)
   const { deadlines, loading: deadlinesLoading, error: deadlinesError } = useDashboardDeadlines(user?.id)
 
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || user?.email?.split("@")[0] || "there"
@@ -51,6 +56,28 @@ export function DashboardShell({ user, onLogout }) {
   const filteredCourses = courses.filter(
     (c) => !search || c.code.toLowerCase().includes(search.toLowerCase()) || c.name.toLowerCase().includes(search.toLowerCase())
   )
+
+  useEffect(() => {
+    const tab = searchParams.get("tab")
+    if (tab && ["dashboard", "courses", "calendar", "docs", "settings"].includes(tab)) {
+      setActiveNav(tab)
+      return
+    }
+    setActiveNav("dashboard")
+  }, [searchParams])
+
+  const handleNavChange = useCallback((nextNav) => {
+    setActiveNav(nextNav)
+    if (nextNav === "dashboard") {
+      router.push("/dashboard")
+      return
+    }
+    router.push(`/dashboard?tab=${nextNav}`)
+  }, [router])
+
+  const handleOpenCourse = useCallback((courseId) => {
+    router.push(`/dashboard/courses/${courseId}`)
+  }, [router])
 
   return (
     <div
@@ -68,11 +95,29 @@ export function DashboardShell({ user, onLogout }) {
       />
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        <DashboardSidebar activeNav={activeNav} setActiveNav={setActiveNav} courses={courses} />
-        {activeNav === "docs" ? (
+        <DashboardSidebar activeNav={activeNav} setActiveNav={handleNavChange} courses={courses} onOpenCourse={handleOpenCourse} />
+        {activeNav === "courses" ? (
+          <DashboardCoursesContent
+            courses={courses}
+            search={search}
+            semesterLabel={`${semester.term} ${semester.year} · Week ${semester.currentWeek} of ${semester.weeksTotal}`}
+            loading={coursesLoading}
+            error={coursesError}
+            onOpenDocuments={() => handleNavChange("docs")}
+            onAddCourse={createCourse}
+          />
+        ) : activeNav === "docs" ? (
           <DashboardDocumentsContent courses={courses} userId={user?.id} />
         ) : activeNav === "calendar" ? (
           <DashboardCalendarContent />
+        ) : activeNav === "settings" ? (
+          <DashboardSettingsContent
+            userEmail={user?.email}
+            onLogout={onLogout}
+            onOpenDocuments={() => handleNavChange("docs")}
+            onOpenCalendar={() => handleNavChange("calendar")}
+            onOpenNotion={() => window.open("https://www.notion.so/", "_blank", "noopener,noreferrer")}
+          />
         ) : (
           <DashboardMainContent
             greeting={greeting}
@@ -87,8 +132,10 @@ export function DashboardShell({ user, onLogout }) {
             deadlines={deadlines}
             deadlinesLoading={deadlinesLoading}
             deadlinesError={deadlinesError}
-            onOpenDocuments={() => setActiveNav("docs")}
-            onOpenCalendar={() => setActiveNav("calendar")}
+            onOpenCourses={() => handleNavChange("courses")}
+            onOpenCourse={handleOpenCourse}
+            onOpenDocuments={() => handleNavChange("docs")}
+            onOpenCalendar={() => handleNavChange("calendar")}
             onOpenNotion={() => window.open("https://www.notion.so/", "_blank", "noopener,noreferrer")}
           />
         )}

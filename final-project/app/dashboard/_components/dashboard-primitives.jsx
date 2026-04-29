@@ -36,7 +36,7 @@ export function Progress({ value, color }) {
   )
 }
 
-export function CourseCard({ course, onUploadDocument }) {
+export function CourseCard({ course, onUploadDocument, onOpenCourse }) {
   return (
     <Card style={{ ...cardStyle({ padding: "20px 22px", marginBottom: 10 }), animation: "fadeUp 0.35s ease both" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
@@ -44,12 +44,7 @@ export function CourseCard({ course, onUploadDocument }) {
           <span style={{ fontFamily: "'Lora', serif", fontWeight: 700, fontSize: 13, color: course.color }}>{course.code.split(" ")[1]}</span>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: T.text }}>{course.code}</span>
-            <span style={{ fontSize: 10, fontWeight: 600, color: course.synced ? "oklch(0.45 0.12 155)" : "oklch(0.50 0.12 45)", background: course.synced ? "oklch(0.92 0.06 155)" : "oklch(0.94 0.06 65)", padding: "1px 7px", borderRadius: 99 }}>
-              {course.synced ? "Synced" : "Not synced"}
-            </span>
-          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 2 }}>{course.code}</div>
           <div style={{ fontSize: 12, color: T.muted, marginBottom: 1 }}>{course.name}</div>
           <div style={{ fontSize: 11, color: T.faint }}>{course.prof}</div>
         </div>
@@ -82,8 +77,8 @@ export function CourseCard({ course, onUploadDocument }) {
         <Button variant="outline" size="sm" style={btnGhostStyle} onClick={() => onUploadDocument?.()}>
           <Icon name="upload" size={12} color={T.faint} /> Upload Document
         </Button>
-        <Button variant="outline" size="sm" style={{ ...btnGhostStyle, marginLeft: "auto" }}>
-          View All <Icon name="arrowRight" size={11} color="currentColor" />
+        <Button variant="outline" size="sm" style={{ ...btnGhostStyle, marginLeft: "auto" }} onClick={() => onOpenCourse?.(course.id)}>
+          Open <Icon name="arrowRight" size={11} color="currentColor" />
         </Button>
       </div>
     </Card>
