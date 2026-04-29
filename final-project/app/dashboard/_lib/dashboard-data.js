@@ -114,6 +114,7 @@ export const QUICK_ACTIONS = [
   { icon: "link", label: "Open Notion", desc: "Open workspace", ac: "oklch(0.45 0.14 250)", bg: "oklch(0.95 0.04 250)" },
   { icon: "sparkles", label: "Re-extract in Documents", desc: "Retry parsing from docs", ac: "oklch(0.52 0.16 45)", bg: "oklch(0.95 0.04 45)" },
   { icon: "calendar", label: "View Calendar", desc: "See all events", ac: "oklch(0.52 0.16 155)", bg: "oklch(0.95 0.04 155)" },
+  { icon: "plus", label: "Create Notion Page", desc: "Add Page", ac: "oklch(0.52 0.16 310)", bg: "oklch(0.95 0.04 310)" },
 ]
 
 export const cardStyle = (extra = {}) => ({

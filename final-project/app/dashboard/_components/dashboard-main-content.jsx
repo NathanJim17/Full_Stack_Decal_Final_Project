@@ -23,6 +23,7 @@ export function DashboardMainContent({
   onOpenDocuments,
   onOpenCalendar,
   onOpenNotion,
+  handleCreateNotionPage,
 }) {
   const upcomingTasks = deadlines.filter((d) => d.daysLeft > 0).length
   const dueThisWeek = deadlines.filter((d) => d.daysLeft <= 7).length
@@ -156,6 +157,7 @@ export function DashboardMainContent({
                   if (a.label === "Re-extract in Documents") onOpenDocuments?.()
                   if (a.label === "View Calendar") onOpenCalendar?.()
                   if (a.label === "Open Notion") onOpenNotion?.()
+                  if (a.label === "Create Notion Page") handleCreateNotionPage()
                 }}
                 style={{ ...cardStyle({ padding: "14px", border: `1.5px solid ${T.borderSub}` }), textAlign: "left", display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-start", gap: 10, fontFamily: "'DM Sans', sans-serif", minHeight: 72 }}>
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: a.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
