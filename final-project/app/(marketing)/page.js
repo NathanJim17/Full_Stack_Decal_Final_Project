@@ -1,9 +1,5 @@
-import AuthStatus from "../components/AuthStatus";
+import LandingAuthPanel from "./_components/landing-auth-panel"
 
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <AuthStatus />
-    </div>
-  );
+  return <LandingAuthPanel />
 }
