@@ -170,7 +170,7 @@ export default function DocumentReviewPage({ params }) {
   return (
     <div
       onClick={() => setAvatarOpen(false)}
-      style={{ display: "flex", flexDirection: "column", height: "100vh", background: T.bg, overflow: "hidden", fontFamily: "'DM Sans', sans-serif", color: T.text, WebkitFontSmoothing: "antialiased" }}>
+      style={{ display: "flex", flexDirection: "column", height: "100vh", background: T.bg, overflowY: "auto", fontFamily: "'DM Sans', sans-serif", color: T.text, WebkitFontSmoothing: "antialiased" }}>
 
       <DashboardTopNav
         search={search}
@@ -183,10 +183,10 @@ export default function DocumentReviewPage({ params }) {
         onLogout={handleLogout}
       />
 
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div style={{ flex: 1, display: "flex" }}>
         <DashboardSidebar activeNav="docs" setActiveNav={handleNavChange} courses={courses} onOpenCourse={handleOpenCourse} />
 
-        <main style={{ flex: 1, overflowY: "auto", padding: "28px 32px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <main style={{ flex: 1, padding: "28px 32px", display: "flex", flexDirection: "column", gap: 20 }}>
 
           {/* Back */}
           <button
