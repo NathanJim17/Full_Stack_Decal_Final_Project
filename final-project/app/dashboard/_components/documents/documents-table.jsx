@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Icon } from "../dashboard-icons"
 import { T, cardStyle } from "../../_lib/dashboard-data"
 import { StatusBadge } from "./documents-status-badge"
@@ -33,6 +34,7 @@ export function SkeletonRow({ i }) {
 
 export function DocRow({ doc, index, courses, onDelete, onAssignCourse, onRetryParse }) {
   const [hovered, setHovered] = useState(false)
+  const router = useRouter()
   const [courseVal, setCourseVal] = useState(doc.courseId || "")
   const [deleted, setDeleted] = useState(false)
   const [savingCourse, setSavingCourse] = useState(false)
@@ -165,6 +167,7 @@ export function DocRow({ doc, index, courses, onDelete, onAssignCourse, onRetryP
           {canReview && (
             <button
               title="Review & Sync"
+              onClick={() => router.push(`/dashboard/docs/${doc.id}`)}
               onMouseEnter={e => e.currentTarget.style.opacity = "0.85"}
               onMouseLeave={e => e.currentTarget.style.opacity = "1"}
               style={{
