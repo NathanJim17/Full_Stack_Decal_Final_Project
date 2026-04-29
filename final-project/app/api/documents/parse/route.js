@@ -25,7 +25,13 @@ async function parseWithFastApi(document, userId) {
   })
 
   if (!response.ok) {
-    throw new Error(`Parser request failed (${response.status})`)
+    let errText = ""
+    try {
+      errText = await response.text()
+    } catch {
+      errText = ""
+    }
+    throw new Error(`Parser request failed (${response.status})${errText ? `: ${errText.slice(0, 300)}` : ""}`)
   }
 
   const json = await response.json()
@@ -91,6 +97,7 @@ export async function POST(request) {
     return Response.json({ ok: true, status: "ready_to_review", assignmentsCount: assignments.length }, { status: 200 })
   } catch (err) {
     const errorMessage = getErrorMessage(err)
+    console.error("documents/parse failed:", errorMessage)
     await supabaseAdmin
       .from("documents")
       .update({
