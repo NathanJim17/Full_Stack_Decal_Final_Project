@@ -1,28 +1,23 @@
 import io
 import json
 import os
+from http.server import BaseHTTPRequestHandler
 from urllib.parse import quote
 
 import requests
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from PyPDF2 import PdfReader
 
-app = FastAPI(title="Document Parser")
-
-
-class ParseRequest(BaseModel):
-    documentId: str
-    userId: str
-    storagePath: str
-    fileName: str | None = None
-    documentType: str | None = None
+class ParseError(Exception):
+    def __init__(self, status_code: int, detail: str):
+        super().__init__(detail)
+        self.status_code = status_code
+        self.detail = detail
 
 
 def require_env(name: str) -> str:
     value = os.environ.get(name, "").strip()
     if not value:
-        raise HTTPException(status_code=500, detail=f"Missing required environment variable: {name}")
+        raise ParseError(500, f"Missing required environment variable: {name}")
     return value
 
 
@@ -33,7 +28,7 @@ def download_pdf_from_supabase_storage(
     object_path: str,
 ) -> bytes:
     if not object_path:
-        raise HTTPException(status_code=400, detail="storagePath is required.")
+        raise ParseError(400, "storagePath is required.")
 
     encoded_path = quote(object_path, safe="/")
     url = f"{supabase_url}/storage/v1/object/{bucket}/{encoded_path}"
@@ -43,10 +38,7 @@ def download_pdf_from_supabase_storage(
     }
     response = requests.get(url, headers=headers, timeout=180)
     if not response.ok:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Failed to download PDF (status={response.status_code}).",
-        )
+        raise ParseError(502, f"Failed to download PDF (status={response.status_code}).")
     return response.content
 
 
@@ -125,10 +117,7 @@ Syllabus text:
 
     response = requests.post(f"{url}?key={gemini_api_key}", json=payload, timeout=180)
     if not response.ok:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Gemini request failed: {response.status_code} {response.text[:300]}",
-        )
+        raise ParseError(502, f"Gemini request failed: {response.status_code} {response.text[:300]}")
 
     data = response.json()
     try:
@@ -139,30 +128,51 @@ Syllabus text:
             return {"assignments": []}
         return {"assignments": assignments}
     except Exception as error:
-        raise HTTPException(status_code=502, detail=f"Gemini JSON parse failed: {error}")
+        raise ParseError(502, f"Gemini JSON parse failed: {error}")
 
 
-@app.post("/")
-@app.post("/api/parse")
-@app.post("/parse")
-def parse(req: ParseRequest):
+def parse_payload(payload: dict) -> dict:
     supabase_url = require_env("NEXT_PUBLIC_SUPABASE_URL")
     service_role_key = require_env("SUPABASE_SERVICE_ROLE_KEY")
+    storage_path = payload.get("storagePath", "")
 
     try:
         pdf_bytes = download_pdf_from_supabase_storage(
             supabase_url=supabase_url,
             service_role_key=service_role_key,
             bucket="documents",
-            object_path=req.storagePath,
+            object_path=storage_path,
         )
 
         text = extract_text_from_pdf(pdf_bytes)
         if not text:
-            raise HTTPException(status_code=422, detail="PDF text extraction returned empty text.")
+            raise ParseError(422, "PDF text extraction returned empty text.")
 
         return gemini_extract_schedule(text)
-    except HTTPException:
+    except ParseError:
         raise
     except Exception as error:
-        raise HTTPException(status_code=500, detail=str(error))
+        raise ParseError(500, str(error))
+
+
+class handler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        try:
+            content_length = int(self.headers.get("content-length", "0"))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+            payload = json.loads(raw_body.decode("utf-8"))
+            data = parse_payload(payload)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(data).encode("utf-8"))
+        except ParseError as error:
+            self.send_response(error.status_code)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": error.detail}).encode("utf-8"))
+        except Exception as error:
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(error)}).encode("utf-8"))
