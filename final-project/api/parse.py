@@ -1,6 +1,7 @@
 import io
 import json
 import os
+from urllib.parse import quote
 
 import requests
 from fastapi import FastAPI, HTTPException
@@ -31,8 +32,15 @@ def download_pdf_from_supabase_storage(
     bucket: str,
     object_path: str,
 ) -> bytes:
-    url = f"{supabase_url}/storage/v1/object/{bucket}/{object_path}"
-    headers = {"Authorization": f"Bearer {service_role_key}"}
+    if not object_path:
+        raise HTTPException(status_code=400, detail="storagePath is required.")
+
+    encoded_path = quote(object_path, safe="/")
+    url = f"{supabase_url}/storage/v1/object/{bucket}/{encoded_path}"
+    headers = {
+        "Authorization": f"Bearer {service_role_key}",
+        "apikey": service_role_key,
+    }
     response = requests.get(url, headers=headers, timeout=180)
     if not response.ok:
         raise HTTPException(
