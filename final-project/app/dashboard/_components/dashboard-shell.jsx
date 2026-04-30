@@ -12,6 +12,10 @@ import { DashboardDocumentsContent } from "./documents/documents-content"
 import { DashboardCalendarContent } from "./calendar/calendar-content"
 import { DashboardCoursesContent } from "./courses/courses-content"
 import { DashboardSettingsContent } from "./settings/settings-content"
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog.jsx"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 
 function getSemesterInfo(now = new Date()) {
   const year = now.getFullYear()
@@ -52,6 +56,8 @@ export function DashboardShell({ user, onLogout }) {
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
   const semester = getSemesterInfo()
   
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [formData, setFormData] = useState({ title: "", description: "", fileId: ""})
 
   const filteredCourses = courses.filter(
     (c) => !search || c.code.toLowerCase().includes(search.toLowerCase()) || c.name.toLowerCase().includes(search.toLowerCase())
@@ -78,6 +84,60 @@ export function DashboardShell({ user, onLogout }) {
   const handleOpenCourse = useCallback((courseId) => {
     router.push(`/dashboard/courses/${courseId}`)
   }, [router])
+
+  const handleCreateNotionPage = async () => {
+      try {
+        // Use the specific endpoint you made for Supabase
+        // Assuming you want to pass a specific file_id
+        const response = await fetch("/api/notion/page-from-supabase?file_id=YOUR_FILE_ID_HERE", {
+          method: "POST",
+        });
+
+        if (!response.ok) throw new Error("Failed to create Notion page");
+
+        const result = await response.json();
+        alert("Notion page created!");
+        if (result.url) window.open(result.url, "_blank");
+      } catch (error) {
+        console.error(error);
+        alert("Error: " + error.message);
+      }
+    };
+
+  const handleSubmit = async () => {
+  // Always good to log with a comma so you can inspect the object in the console!
+  console.log("Submitting form data:", formData);
+
+    try {
+      // We send the fileId as a query parameter to match your FastAPI setup
+      const response = await fetch(`/api/notion/page-from-supabase?file_id=${formData.fileId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // If your backend needs the name/details too, send them in the body
+        body: JSON.stringify({
+          title: formData.name,
+          content: formData.details
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to create page");
+
+      const result = await response.json();
+      alert("Success! Page created.");
+      
+      if (result.url) window.open(result.url, "_blank");
+      
+      // Close the modal and reset form
+      setIsModalOpen(false);
+      setFormData({ name: "", details: "", fileId: "" });
+      
+    } catch (error) {
+      console.error("Submission error:", error);
+      alert("Failed to create Notion page.");
+    }
+  };
 
   return (
     <div
@@ -132,6 +192,7 @@ export function DashboardShell({ user, onLogout }) {
             deadlines={deadlines}
             deadlinesLoading={deadlinesLoading}
             deadlinesError={deadlinesError}
+            handleCreateNotionPage= { handleCreateNotionPage }
             onOpenCourses={() => handleNavChange("courses")}
             onOpenCourse={handleOpenCourse}
             onOpenDocuments={() => handleNavChange("docs")}
@@ -141,5 +202,5 @@ export function DashboardShell({ user, onLogout }) {
         )}
       </div>
     </div>
-  )
+  );
 }

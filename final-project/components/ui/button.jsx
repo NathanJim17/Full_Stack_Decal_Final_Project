@@ -39,24 +39,6 @@ const buttonVariants = cva(
   }
 )
 
-const handleCreateNotionPage = async () => {
-  const title = window.prompt("Enter page title:");
-  if (!title) return alert("Title is required");
-
-  try {
-    const response = await fetch("http://localhost:3000/api/create-page", {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title }),
-    });
-    const data = await response.json();
-    if (data.page_url) window.open(data.page_url, "_blank");
-  } catch (err) {
-    console.error("Error creating Notion page:", err);
-    alert("Failed to create Notion page. Please try again.");
-  }
-};
-
 function Button({
   className,
   variant = "default",

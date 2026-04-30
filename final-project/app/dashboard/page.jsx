@@ -12,7 +12,9 @@ export default function DashboardPage() {
         Loading dashboard…
       </div>
     )
-  }
+  };
 
-  return <DashboardShell user={user} onLogout={handleLogout} />
+  return (
+      <DashboardShell user={user} onLogout={handleLogout} />
+  );
 }
