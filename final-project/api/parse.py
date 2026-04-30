@@ -18,6 +18,13 @@ class ParseRequest(BaseModel):
     documentType: str | None = None
 
 
+def require_env(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise HTTPException(status_code=500, detail=f"Missing required environment variable: {name}")
+    return value
+
+
 def download_pdf_from_supabase_storage(
     supabase_url: str,
     service_role_key: str,
@@ -45,7 +52,7 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
 
 
 def gemini_extract_schedule(text: str) -> dict:
-    gemini_api_key = os.environ["GEMINI_API_KEY"]
+    gemini_api_key = require_env("GEMINI_API_KEY")
     model = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
 
     max_chars = int(os.environ.get("MAX_SYLLABUS_CHARS", "25000"))
@@ -127,11 +134,12 @@ Syllabus text:
         raise HTTPException(status_code=502, detail=f"Gemini JSON parse failed: {error}")
 
 
+@app.post("/")
 @app.post("/api/parse")
 @app.post("/parse")
 def parse(req: ParseRequest):
-    supabase_url = os.environ["NEXT_PUBLIC_SUPABASE_URL"]
-    service_role_key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+    supabase_url = require_env("NEXT_PUBLIC_SUPABASE_URL")
+    service_role_key = require_env("SUPABASE_SERVICE_ROLE_KEY")
 
     try:
         pdf_bytes = download_pdf_from_supabase_storage(
