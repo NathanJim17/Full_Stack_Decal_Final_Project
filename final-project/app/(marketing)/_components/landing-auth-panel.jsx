@@ -160,7 +160,7 @@ export default function LandingAuthPanel() {
             height={36}
           />
           <span style={{ display: "inline-block", padding: "6px 12px", borderRadius: 999, background: T.surface, border: `1px solid ${T.borderSub}`, color: T.muted, fontSize: 12, fontWeight: 600 }}>
-            StudyFlow Dashboard
+            Calendar Sync
           </span>
           <h1 style={{ marginTop: 16, marginBottom: 12, fontFamily: "'Lora', serif", fontSize: 42, lineHeight: 1.15 }}>
             Plan classes, files, and deadlines in one place.
