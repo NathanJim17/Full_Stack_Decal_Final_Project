@@ -1,6 +1,0 @@
-fastapi
-uvicorn[standard]
-requests
-PyPDF2
-pydantic
-python-dotenv

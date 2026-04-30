@@ -46,6 +46,23 @@ Google Calendar event creation uses Google OAuth through Supabase (not API keys)
 
 The review page sync flow sends the current Supabase access token plus Google provider token to `POST /api/documents/sync-calendar`.
 
+### Document parser (Vercel Python function)
+
+Document parsing runs inside this same Vercel project via the Python serverless endpoint `POST /api/parse`.
+
+Required Vercel environment variables:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `GEMINI_API_KEY`
+- Optional: `GEMINI_MODEL` (default `gemini-2.0-flash`)
+- Optional: `MAX_SYLLABUS_CHARS` (default `25000`)
+
+Optional compatibility variable:
+
+- `DOCUMENT_PARSER_URL` (defaults to `/api/parse` when omitted)
+
 ### Course schedule sync
 
 Lecture times are now manual user input at the course level (not parser extracted).

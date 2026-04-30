@@ -6,11 +6,20 @@ function getErrorMessage(err) {
   return "Unknown parsing error"
 }
 
-async function parseWithFastApi(document, userId) {
-  const parserUrl = process.env.DOCUMENT_PARSER_URL
-  if (!parserUrl) {
-    throw new Error("DOCUMENT_PARSER_URL is not configured")
+function resolveParserUrl(request) {
+  const configured = process.env.DOCUMENT_PARSER_URL?.trim()
+  if (configured) {
+    try {
+      return new URL(configured, request.url).toString()
+    } catch {
+      throw new Error("DOCUMENT_PARSER_URL is invalid")
+    }
   }
+  return new URL("/api/parse", request.url).toString()
+}
+
+async function parseWithFastApi(request, document, userId) {
+  const parserUrl = resolveParserUrl(request)
 
   const response = await fetch(parserUrl, {
     method: "POST",
@@ -80,7 +89,7 @@ export async function POST(request) {
   }
 
   try {
-    const parsed = await parseWithFastApi(document, user.id)
+    const parsed = await parseWithFastApi(request, document, user.id)
 
     const { error: updateError } = await supabaseAdmin
       .from("documents")
