@@ -40,7 +40,7 @@ export function useDashboardDocumentReview(userId, documentId) {
 
     const { data, error: dbError } = await supabase
       .from("documents")
-      .select("id, user_id, file_name, document_type, status, extracted_assignments, updated_at")
+      .select("id, user_id, file_name, course_id, document_type, status, extracted_assignments, updated_at")
       .eq("id", documentId)
       .eq("user_id", userId)
       .maybeSingle()
@@ -60,6 +60,7 @@ export function useDashboardDocumentReview(userId, documentId) {
     setDoc({
       id: data.id,
       fileName: data.file_name,
+      courseId: data.course_id,
       documentType: data.document_type,
       status: formatStatus(data.status),
       updated: formatUpdated(data.updated_at),

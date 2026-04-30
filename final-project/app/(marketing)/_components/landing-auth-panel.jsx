@@ -104,6 +104,11 @@ export default function LandingAuthPanel() {
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/dashboard`,
+        scopes: "https://www.googleapis.com/auth/calendar.events",
+        queryParams: {
+          prompt: "consent",
+          access_type: "offline",
+        },
       },
     })
 

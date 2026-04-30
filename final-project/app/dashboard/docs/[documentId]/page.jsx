@@ -92,6 +92,8 @@ export default function DocumentReviewPage({ params }) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState(null)
   const [search, setSearch] = useState("")
   const [avatarOpen, setAvatarOpen] = useState(false)
   const router = useRouter()
@@ -137,6 +139,69 @@ export default function DocumentReviewPage({ params }) {
     setSaved(true)
     await reload()
     setTimeout(() => setSaved(false), 2500)
+  }
+
+  async function handleSyncCalendar() {
+    if (!user?.id) return
+    setSyncing(true)
+    setSyncMessage(null)
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
+    const providerToken = sessionData?.session?.provider_token
+
+    if (sessionError || !token || !providerToken) {
+      setSyncing(false)
+      setSyncMessage("Connect Google Calendar permissions and try again.")
+      return
+    }
+
+    const courseCodeFromAssignment = courses.find(c => c.id === doc?.courseId)?.code?.trim() || ""
+    let courseCode = courseCodeFromAssignment
+    if (!courseCode) {
+      const typed = window.prompt("Enter a course code for these calendar events (e.g., CS 61A):", "")
+      courseCode = typed?.trim() || ""
+      if (!courseCode) {
+        setSyncing(false)
+        setSyncMessage("Sync cancelled. Course code is required.")
+        return
+      }
+    }
+
+    try {
+      const response = await fetch("/api/documents/sync-calendar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ documentId, providerAccessToken: providerToken, courseCode }),
+      })
+
+      const json = await response.json()
+      if (!response.ok) {
+        setSyncMessage(json?.error || "Calendar sync failed.")
+        setSyncing(false)
+        return
+      }
+
+      const summary = json?.summary || {}
+      const failed = Number(summary.failed || 0)
+      const created = Number(summary.created || 0)
+      const skipped = Number(summary.skipped || 0)
+
+      if (failed > 0) {
+        setSyncMessage(`Partial sync: ${created} created, ${skipped} skipped, ${failed} failed.`)
+      } else {
+        setSyncMessage(`Calendar synced: ${created} created, ${skipped} skipped.`)
+      }
+
+      await reload()
+    } catch {
+      setSyncMessage("Calendar sync failed. Please try again.")
+    } finally {
+      setSyncing(false)
+    }
   }
 
   if (authLoading || loading) {
@@ -264,24 +329,38 @@ export default function DocumentReviewPage({ params }) {
 
           {/* Save footer */}
           <div style={{ position: "sticky", bottom: 0, background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: 14, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: `0 -2px 12px ${T.shadow}` }}>
-            <div style={{ fontSize: 12.5, color: saveError ? "oklch(0.50 0.14 28)" : saved ? "oklch(0.42 0.14 155)" : T.muted, display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ fontSize: 12.5, color: saveError || (syncMessage && syncMessage.toLowerCase().includes("failed")) || (syncMessage && syncMessage.toLowerCase().includes("partial")) ? "oklch(0.50 0.14 28)" : saved || syncMessage ? "oklch(0.42 0.14 155)" : T.muted, display: "flex", alignItems: "center", gap: 6 }}>
               {saved && <Icon name="check" size={14} color="oklch(0.42 0.14 155)" />}
-              {saved
+              {syncMessage
+                ? syncMessage
+                : saved
                 ? "Changes saved."
                 : saveError
                   ? saveError
                   : `${assignments.length} assignment${assignments.length !== 1 ? "s" : ""} — review and save when ready`}
             </div>
-            <button
-              onClick={() => { void handleSave() }}
-              disabled={saving}
-              onMouseEnter={e => { if (!saving) e.currentTarget.style.opacity = "0.85" }}
-              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-              style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 22px", border: "none", borderRadius: 99, background: saving ? T.border : T.accent, color: saving ? T.faint : "#fff", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13.5, cursor: saving ? "wait" : "pointer", boxShadow: saving ? "none" : `0 2px 8px oklch(0.50 0.18 285 / 0.28)`, transition: "all 0.15s" }}>
-              {saving
-                ? <><Icon name="loader" size={14} color={T.faint} style={{ animation: "spin 1.2s linear infinite" }} /> Saving…</>
-                : <><Icon name="check" size={14} color="#fff" /> Save review</>}
-            </button>
+            <div style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+              <button
+                onClick={() => { void handleSyncCalendar() }}
+                disabled={syncing || saving}
+                onMouseEnter={e => { if (!syncing && !saving) e.currentTarget.style.opacity = "0.85" }}
+                onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+                style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 18px", border: `1.5px solid ${T.border}`, borderRadius: 99, background: syncing || saving ? T.surface2 : T.surface, color: syncing || saving ? T.faint : T.text, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: syncing || saving ? "wait" : "pointer", transition: "all 0.15s" }}>
+                {syncing
+                  ? <><Icon name="loader" size={14} color={T.faint} style={{ animation: "spin 1.2s linear infinite" }} /> Syncing…</>
+                  : <><Icon name="calendar" size={14} color={syncing || saving ? T.faint : T.accent} /> Sync to Calendar</>}
+              </button>
+              <button
+                onClick={() => { void handleSave() }}
+                disabled={saving || syncing}
+                onMouseEnter={e => { if (!saving && !syncing) e.currentTarget.style.opacity = "0.85" }}
+                onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+                style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 22px", border: "none", borderRadius: 99, background: saving || syncing ? T.border : T.accent, color: saving || syncing ? T.faint : "#fff", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13.5, cursor: saving || syncing ? "wait" : "pointer", boxShadow: saving || syncing ? "none" : `0 2px 8px oklch(0.50 0.18 285 / 0.28)`, transition: "all 0.15s" }}>
+                {saving
+                  ? <><Icon name="loader" size={14} color={T.faint} style={{ animation: "spin 1.2s linear infinite" }} /> Saving…</>
+                  : <><Icon name="check" size={14} color="#fff" /> Save review</>}
+              </button>
+            </div>
           </div>
 
         </main>
