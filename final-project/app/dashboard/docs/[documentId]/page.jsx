@@ -138,15 +138,11 @@ export default function DocumentReviewPage({ params }) {
   const [assignments, setAssignments] = useState([])
   const [courseSchedule, setCourseSchedule] = useState({
     lectureDays: [],
+    courseStartDate: "",
     lectureStartTime: "",
     lectureEndTime: "",
     lectureLocation: "",
-    sectionEnabled: false,
-    sectionLabel: "",
-    sectionDays: [],
-    sectionStartTime: "",
-    sectionEndTime: "",
-    sectionLocation: "",
+    scheduleExtras: [],
     termEndDate: "",
   })
   const [saving, setSaving] = useState(false)
@@ -167,15 +163,21 @@ export default function DocumentReviewPage({ params }) {
       const activeCourse = courses.find((c) => c.id === doc.courseId)
       setCourseSchedule({
         lectureDays: activeCourse?.lectureDays ?? [],
+        courseStartDate: activeCourse?.courseStartDate ?? "",
         lectureStartTime: activeCourse?.lectureStartTime ?? "",
         lectureEndTime: activeCourse?.lectureEndTime ?? "",
         lectureLocation: activeCourse?.lectureLocation ?? "",
-        sectionEnabled: Boolean(activeCourse?.sectionEnabled),
-        sectionLabel: activeCourse?.sectionLabel ?? "",
-        sectionDays: activeCourse?.sectionDays ?? [],
-        sectionStartTime: activeCourse?.sectionStartTime ?? "",
-        sectionEndTime: activeCourse?.sectionEndTime ?? "",
-        sectionLocation: activeCourse?.sectionLocation ?? "",
+        scheduleExtras: Array.isArray(activeCourse?.scheduleExtras)
+          ? activeCourse.scheduleExtras
+          : (activeCourse?.sectionEnabled
+            ? [{
+                label: activeCourse.sectionLabel || "Section",
+                days: activeCourse.sectionDays || [],
+                start_time: activeCourse.sectionStartTime || "",
+                end_time: activeCourse.sectionEndTime || "",
+                location: activeCourse.sectionLocation || "",
+              }]
+            : []),
         termEndDate: activeCourse?.termEndDate ?? "",
       })
     }
@@ -210,13 +212,38 @@ export default function DocumentReviewPage({ params }) {
     if (!doc?.courseId) return "Assign this document to a course first."
     if (!courseSchedule.lectureDays.length) return "Pick lecture days."
     if (!courseSchedule.lectureStartTime || !courseSchedule.lectureEndTime) return "Set lecture start and end times."
+    if (!courseSchedule.courseStartDate) return "Set course start date."
     if (!courseSchedule.termEndDate) return "Set term end date."
-    if (courseSchedule.sectionEnabled) {
-      if (!courseSchedule.sectionLabel.trim()) return "Add a section label (for example: Discussion or Lab)."
-      if (!courseSchedule.sectionDays.length) return "Pick section days."
-      if (!courseSchedule.sectionStartTime || !courseSchedule.sectionEndTime) return "Set section start and end times."
+    for (const extra of courseSchedule.scheduleExtras) {
+      if (!String(extra.label ?? "").trim()) return "Each additional schedule item needs a label (for example: Discussion or Lab)."
+      if (!Array.isArray(extra.days) || extra.days.length === 0) return "Pick days for each additional schedule item."
+      if (!extra.start_time || !extra.end_time) return "Set start and end times for each additional schedule item."
     }
     return null
+  }
+
+  function handleExtraChange(index, field, value) {
+    setCourseSchedule((prev) => ({
+      ...prev,
+      scheduleExtras: prev.scheduleExtras.map((item, i) => i === index ? { ...item, [field]: value } : item),
+    }))
+  }
+
+  function handleExtraAdd() {
+    setCourseSchedule((prev) => ({
+      ...prev,
+      scheduleExtras: [
+        ...prev.scheduleExtras,
+        { label: "Discussion", days: [], start_time: "", end_time: "", location: "" },
+      ],
+    }))
+  }
+
+  function handleExtraDelete(index) {
+    setCourseSchedule((prev) => ({
+      ...prev,
+      scheduleExtras: prev.scheduleExtras.filter((_, i) => i !== index),
+    }))
   }
 
   async function handleSave() {
@@ -247,15 +274,17 @@ export default function DocumentReviewPage({ params }) {
       .from("courses")
       .update({
         lecture_days: courseSchedule.lectureDays,
+        course_start_date: courseSchedule.courseStartDate || null,
         lecture_start_time: courseSchedule.lectureStartTime,
         lecture_end_time: courseSchedule.lectureEndTime,
         lecture_location: courseSchedule.lectureLocation || null,
-        section_enabled: courseSchedule.sectionEnabled,
-        section_label: courseSchedule.sectionEnabled ? courseSchedule.sectionLabel : null,
-        section_days: courseSchedule.sectionEnabled ? courseSchedule.sectionDays : [],
-        section_start_time: courseSchedule.sectionEnabled ? courseSchedule.sectionStartTime : null,
-        section_end_time: courseSchedule.sectionEnabled ? courseSchedule.sectionEndTime : null,
-        section_location: courseSchedule.sectionEnabled ? (courseSchedule.sectionLocation || null) : null,
+        schedule_extras: courseSchedule.scheduleExtras,
+        section_enabled: false,
+        section_label: null,
+        section_days: [],
+        section_start_time: null,
+        section_end_time: null,
+        section_location: null,
         term_end_date: courseSchedule.termEndDate || null,
       })
       .eq("id", doc.courseId)
@@ -484,30 +513,53 @@ export default function DocumentReviewPage({ params }) {
                 </div>
 
                 <div style={{ display: "grid", gap: 10 }}>
-                  <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12.5, color: T.text }}>
-                    <input
-                      type="checkbox"
-                      checked={courseSchedule.sectionEnabled}
-                      onChange={(e) => handleScheduleChange("sectionEnabled", e.target.checked)}
-                    />
-                    Add section/discussion/lab schedule
-                  </label>
-                  {courseSchedule.sectionEnabled && (
-                    <div style={{ display: "grid", gap: 10 }}>
-                      <input type="text" value={courseSchedule.sectionLabel} onChange={(e) => handleScheduleChange("sectionLabel", e.target.value)} placeholder="Section label (e.g. Discussion, Lab)" style={{ ...inputSt, maxWidth: 360 }} />
-                      <DayToggleGroup value={courseSchedule.sectionDays} onChange={(value) => handleScheduleChange("sectionDays", value)} />
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 12.5, color: T.text, fontWeight: 600 }}>Additional recurring items (Discussion/Lab/etc.)</span>
+                    <button
+                      type="button"
+                      onClick={handleExtraAdd}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", border: "none", borderRadius: 99, background: T.accent, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                      <Icon name="plus" size={12} color="#fff" /> Add
+                    </button>
+                  </div>
+                  {courseSchedule.scheduleExtras.length === 0 ? (
+                    <div style={{ fontSize: 12, color: T.faint }}>No additional items yet.</div>
+                  ) : courseSchedule.scheduleExtras.map((extra, index) => (
+                    <div key={index} style={{ border: `1px solid ${T.borderSub}`, borderRadius: 10, padding: 10, display: "grid", gap: 10 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "minmax(180px, 260px) auto", gap: 10, alignItems: "center" }}>
+                        <input
+                          type="text"
+                          value={extra.label ?? ""}
+                          onChange={(e) => handleExtraChange(index, "label", e.target.value)}
+                          placeholder="Label (e.g. Discussion, Lab)"
+                          style={inputSt}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleExtraDelete(index)}
+                          style={{ ...btnGhostStyle, color: "oklch(0.50 0.14 28)", borderColor: "oklch(0.88 0.05 28)" }}>
+                          Remove
+                        </button>
+                      </div>
+                      <DayToggleGroup value={extra.days} onChange={(value) => handleExtraChange(index, "days", value)} />
                       <div style={{ display: "grid", gridTemplateColumns: "160px 160px minmax(200px, 1fr)", gap: 10 }}>
-                        <input type="time" value={courseSchedule.sectionStartTime} onChange={(e) => handleScheduleChange("sectionStartTime", e.target.value)} style={inputSt} />
-                        <input type="time" value={courseSchedule.sectionEndTime} onChange={(e) => handleScheduleChange("sectionEndTime", e.target.value)} style={inputSt} />
-                        <input type="text" value={courseSchedule.sectionLocation} onChange={(e) => handleScheduleChange("sectionLocation", e.target.value)} placeholder="Optional section location" style={inputSt} />
+                        <input type="time" value={extra.start_time ?? ""} onChange={(e) => handleExtraChange(index, "start_time", e.target.value)} style={inputSt} />
+                        <input type="time" value={extra.end_time ?? ""} onChange={(e) => handleExtraChange(index, "end_time", e.target.value)} style={inputSt} />
+                        <input type="text" value={extra.location ?? ""} onChange={(e) => handleExtraChange(index, "location", e.target.value)} placeholder="Optional location" style={inputSt} />
                       </div>
                     </div>
-                  )}
+                  ))}
                 </div>
 
-                <div style={{ display: "grid", gap: 6, maxWidth: 220 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "220px 220px", gap: 14, maxWidth: 460 }}>
+                  <div style={{ display: "grid", gap: 6 }}>
+                    <span style={{ fontSize: 11.5, color: T.faint }}>Course start date</span>
+                    <input type="date" value={courseSchedule.courseStartDate} onChange={(e) => handleScheduleChange("courseStartDate", e.target.value)} style={inputSt} />
+                  </div>
+                  <div style={{ display: "grid", gap: 6 }}>
                   <span style={{ fontSize: 11.5, color: T.faint }}>Term end date</span>
                   <input type="date" value={courseSchedule.termEndDate} onChange={(e) => handleScheduleChange("termEndDate", e.target.value)} style={inputSt} />
+                  </div>
                 </div>
               </div>
             )}

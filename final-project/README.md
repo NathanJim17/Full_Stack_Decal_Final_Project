@@ -51,6 +51,7 @@ The review page sync flow sends the current Supabase access token plus Google pr
 Lecture times are now manual user input at the course level (not parser extracted).
 From the document review page, users enter and save:
 
+- course start date
 - lecture days (`MO..SU`) and start/end times
 - optional lecture location
 - optional section/discussion/lab schedule (custom label, days, times, optional location)

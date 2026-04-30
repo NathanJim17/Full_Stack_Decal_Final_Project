@@ -196,7 +196,7 @@ export async function POST(request) {
   if (document.course_id) {
     const { data: courseRow } = await supabaseAdmin
       .from("courses")
-      .select("code, lecture_days, lecture_start_time, lecture_end_time, lecture_location, section_enabled, section_label, section_days, section_start_time, section_end_time, section_location, term_end_date")
+      .select("code, lecture_days, course_start_date, lecture_start_time, lecture_end_time, lecture_location, schedule_extras, section_enabled, section_label, section_days, section_start_time, section_end_time, section_location, term_end_date")
       .eq("id", document.course_id)
       .eq("user_id", user.id)
       .maybeSingle()
@@ -248,6 +248,7 @@ export async function POST(request) {
   }
 
   const termEndDate = String(courseSchedule?.term_end_date ?? "").slice(0, 10)
+  const courseStartDate = String(courseSchedule?.course_start_date ?? "").slice(0, 10)
   const lecturePayload = toRecurringCoursePayload(document, documentId, {
     keyPrefix: "lecture",
     title: resolvedCourseCode ? `${resolvedCourseCode} — Lecture` : "Lecture",
@@ -256,6 +257,7 @@ export async function POST(request) {
     days: courseSchedule?.lecture_days,
     startTime: courseSchedule?.lecture_start_time,
     endTime: courseSchedule?.lecture_end_time,
+    startDate: courseStartDate,
     endDate: termEndDate,
     location: courseSchedule?.lecture_location,
     fallbackDurationMinutes: 60,
@@ -278,36 +280,50 @@ export async function POST(request) {
     }
   }
 
-  if (courseSchedule?.section_enabled) {
-    const sectionLabel = String(courseSchedule.section_label ?? "").trim() || "Section"
+  const extras = Array.isArray(courseSchedule?.schedule_extras) && courseSchedule.schedule_extras.length
+    ? courseSchedule.schedule_extras
+    : (courseSchedule?.section_enabled
+      ? [{
+          label: courseSchedule.section_label || "Section",
+          days: courseSchedule.section_days || [],
+          start_time: courseSchedule.section_start_time || "",
+          end_time: courseSchedule.section_end_time || "",
+          location: courseSchedule.section_location || "",
+        }]
+      : [])
+
+  for (const [index, extra] of extras.entries()) {
+    const sectionLabel = String(extra?.label ?? "").trim() || "Section"
     const sectionPayload = toRecurringCoursePayload(document, documentId, {
-      keyPrefix: "section",
+      keyPrefix: `extra_${index}`,
       title: resolvedCourseCode ? `${resolvedCourseCode} — ${sectionLabel}` : sectionLabel,
-      label: "Section schedule",
+      label: `${sectionLabel} schedule`,
       courseCode: resolvedCourseCode,
-      days: courseSchedule.section_days,
-      startTime: courseSchedule.section_start_time,
-      endTime: courseSchedule.section_end_time,
+      days: extra?.days,
+      startTime: extra?.start_time,
+      endTime: extra?.end_time,
+      startDate: courseStartDate,
       endDate: termEndDate,
-      location: courseSchedule.section_location,
+      location: extra?.location,
       fallbackDurationMinutes: 90,
     })
 
     if (!sectionPayload.valid) {
       lectureFailed += 1
       results.push({ title: sectionLabel, due_date: termEndDate, outcome: "lecture_failed_validation", detail: sectionPayload.reason })
+      continue
+    }
+
+    const sectionResult = await createCalendarEvent(providerAccessToken, sectionPayload.payload)
+    if (sectionResult.ok && sectionResult.duplicate) {
+      lectureSkipped += 1
+      results.push({ title: sectionLabel, due_date: termEndDate, outcome: "lecture_skipped_existing" })
+    } else if (sectionResult.ok) {
+      lectureCreated += 1
+      results.push({ title: sectionLabel, due_date: termEndDate, outcome: "lecture_created" })
     } else {
-      const sectionResult = await createCalendarEvent(providerAccessToken, sectionPayload.payload)
-      if (sectionResult.ok && sectionResult.duplicate) {
-        lectureSkipped += 1
-        results.push({ title: sectionLabel, due_date: termEndDate, outcome: "lecture_skipped_existing" })
-      } else if (sectionResult.ok) {
-        lectureCreated += 1
-        results.push({ title: sectionLabel, due_date: termEndDate, outcome: "lecture_created" })
-      } else {
-        lectureFailed += 1
-        results.push({ title: sectionLabel, due_date: termEndDate, outcome: "lecture_failed", detail: sectionResult.error })
-      }
+      lectureFailed += 1
+      results.push({ title: sectionLabel, due_date: termEndDate, outcome: "lecture_failed", detail: sectionResult.error })
     }
   }
 
@@ -315,7 +331,7 @@ export async function POST(request) {
   const syncStatus = failed === 0 && lectureFailed === 0 ? "synced" : "error"
   const failureSummary = failed === 0 && lectureFailed === 0
     ? null
-    : failed + lectureFailed < total + 2
+    : failed + lectureFailed < total + 1 + extras.length
       ? `${failed} assignment and ${lectureFailed} lecture events failed to sync. Some events may already exist, require end dates, or need renewed Google permissions.`
       : "Calendar sync failed. Please reconnect Google and try again."
 
@@ -339,7 +355,7 @@ export async function POST(request) {
     ok: failed === 0 && lectureFailed === 0,
     status: syncStatus,
     summary: { total, created, skipped, failed },
-    lectureSummary: { total: courseSchedule?.section_enabled ? 2 : 1, created: lectureCreated, skipped: lectureSkipped, failed: lectureFailed },
+    lectureSummary: { total: 1 + extras.length, created: lectureCreated, skipped: lectureSkipped, failed: lectureFailed },
     summary_flat: {
       created,
       skipped,
