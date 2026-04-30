@@ -12,6 +12,16 @@ import { useDashboardDocumentReview } from "../../_hooks/use-dashboard-document-
 import { supabase } from "@/lib/supabase"
 
 const TYPES = ["Homework", "Exam", "Project", "Quiz", "Lab"]
+const WEEKDAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+const DAY_LABELS = {
+  MO: "Mon",
+  TU: "Tue",
+  WE: "Wed",
+  TH: "Thu",
+  FR: "Fri",
+  SA: "Sat",
+  SU: "Sun",
+}
 
 const inputSt = {
   height: 34, padding: "0 10px",
@@ -82,6 +92,43 @@ function AssignmentRow({ assignment, index, onChange, onDelete }) {
   )
 }
 
+function DayToggleGroup({ value, onChange }) {
+  const daySet = new Set(Array.isArray(value) ? value : [])
+  function toggle(code) {
+    const next = new Set(daySet)
+    if (next.has(code)) next.delete(code)
+    else next.add(code)
+    onChange(Array.from(next))
+  }
+
+  return (
+    <div style={{ display: "inline-flex", gap: 6, flexWrap: "wrap" }}>
+      {WEEKDAY_CODES.map((code) => {
+        const active = daySet.has(code)
+        return (
+          <button
+            key={code}
+            type="button"
+            onClick={() => toggle(code)}
+            style={{
+              border: `1.5px solid ${active ? T.accent : T.borderSub}`,
+              background: active ? T.accentBg : T.surface,
+              color: active ? T.accent : T.faint,
+              borderRadius: 999,
+              padding: "4px 10px",
+              fontSize: 11.5,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif",
+            }}>
+            {DAY_LABELS[code]}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function DocumentReviewPage({ params }) {
   const { documentId } = use(params)
   const { user, loading: authLoading, handleLogout } = useDashboardAuth()
@@ -89,6 +136,19 @@ export default function DocumentReviewPage({ params }) {
   const { doc, loading, error, reload } = useDashboardDocumentReview(user?.id, documentId)
 
   const [assignments, setAssignments] = useState([])
+  const [courseSchedule, setCourseSchedule] = useState({
+    lectureDays: [],
+    lectureStartTime: "",
+    lectureEndTime: "",
+    lectureLocation: "",
+    sectionEnabled: false,
+    sectionLabel: "",
+    sectionDays: [],
+    sectionStartTime: "",
+    sectionEndTime: "",
+    sectionLocation: "",
+    termEndDate: "",
+  })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState(null)
@@ -102,8 +162,24 @@ export default function DocumentReviewPage({ params }) {
   const initial = firstName[0]?.toUpperCase() || "U"
 
   useEffect(() => {
-    if (doc) setAssignments(doc.extractedAssignments)
-  }, [doc])
+    if (doc) {
+      setAssignments(doc.extractedAssignments)
+      const activeCourse = courses.find((c) => c.id === doc.courseId)
+      setCourseSchedule({
+        lectureDays: activeCourse?.lectureDays ?? [],
+        lectureStartTime: activeCourse?.lectureStartTime ?? "",
+        lectureEndTime: activeCourse?.lectureEndTime ?? "",
+        lectureLocation: activeCourse?.lectureLocation ?? "",
+        sectionEnabled: Boolean(activeCourse?.sectionEnabled),
+        sectionLabel: activeCourse?.sectionLabel ?? "",
+        sectionDays: activeCourse?.sectionDays ?? [],
+        sectionStartTime: activeCourse?.sectionStartTime ?? "",
+        sectionEndTime: activeCourse?.sectionEndTime ?? "",
+        sectionLocation: activeCourse?.sectionLocation ?? "",
+        termEndDate: activeCourse?.termEndDate ?? "",
+      })
+    }
+  }, [doc, courses])
 
   const handleNavChange = useCallback((nextNav) => {
     if (nextNav === "dashboard") { router.push("/dashboard"); return }
@@ -126,16 +202,67 @@ export default function DocumentReviewPage({ params }) {
     setAssignments(prev => [...prev, { title: "", due_date: "", weight: "", type: "Homework" }])
   }
 
+  function handleScheduleChange(field, value) {
+    setCourseSchedule((prev) => ({ ...prev, [field]: value }))
+  }
+
+  function validateScheduleForCourse() {
+    if (!doc?.courseId) return "Assign this document to a course first."
+    if (!courseSchedule.lectureDays.length) return "Pick lecture days."
+    if (!courseSchedule.lectureStartTime || !courseSchedule.lectureEndTime) return "Set lecture start and end times."
+    if (!courseSchedule.termEndDate) return "Set term end date."
+    if (courseSchedule.sectionEnabled) {
+      if (!courseSchedule.sectionLabel.trim()) return "Add a section label (for example: Discussion or Lab)."
+      if (!courseSchedule.sectionDays.length) return "Pick section days."
+      if (!courseSchedule.sectionStartTime || !courseSchedule.sectionEndTime) return "Set section start and end times."
+    }
+    return null
+  }
+
   async function handleSave() {
     setSaving(true)
     setSaveError(null)
+    const scheduleError = validateScheduleForCourse()
+    if (scheduleError) {
+      setSaving(false)
+      setSaveError(scheduleError)
+      return
+    }
+
     const { error: dbError } = await supabase
       .from("documents")
-      .update({ extracted_assignments: assignments, status: "ready_to_review" })
+      .update({
+        extracted_assignments: assignments,
+        status: "ready_to_review",
+      })
       .eq("id", documentId)
       .eq("user_id", user.id)
+    if (dbError) {
+      setSaving(false)
+      setSaveError(dbError.message)
+      return
+    }
+
+    const { error: courseError } = await supabase
+      .from("courses")
+      .update({
+        lecture_days: courseSchedule.lectureDays,
+        lecture_start_time: courseSchedule.lectureStartTime,
+        lecture_end_time: courseSchedule.lectureEndTime,
+        lecture_location: courseSchedule.lectureLocation || null,
+        section_enabled: courseSchedule.sectionEnabled,
+        section_label: courseSchedule.sectionEnabled ? courseSchedule.sectionLabel : null,
+        section_days: courseSchedule.sectionEnabled ? courseSchedule.sectionDays : [],
+        section_start_time: courseSchedule.sectionEnabled ? courseSchedule.sectionStartTime : null,
+        section_end_time: courseSchedule.sectionEnabled ? courseSchedule.sectionEndTime : null,
+        section_location: courseSchedule.sectionEnabled ? (courseSchedule.sectionLocation || null) : null,
+        term_end_date: courseSchedule.termEndDate || null,
+      })
+      .eq("id", doc.courseId)
+      .eq("user_id", user.id)
+
     setSaving(false)
-    if (dbError) { setSaveError(dbError.message); return }
+    if (courseError) { setSaveError(courseError.message); return }
     setSaved(true)
     await reload()
     setTimeout(() => setSaved(false), 2500)
@@ -186,14 +313,18 @@ export default function DocumentReviewPage({ params }) {
       }
 
       const summary = json?.summary || {}
+      const lectureSummary = json?.lectureSummary || {}
       const failed = Number(summary.failed || 0)
       const created = Number(summary.created || 0)
       const skipped = Number(summary.skipped || 0)
+      const lectureCreated = Number(lectureSummary.created || 0)
+      const lectureSkipped = Number(lectureSummary.skipped || 0)
+      const lectureFailed = Number(lectureSummary.failed || 0)
 
-      if (failed > 0) {
-        setSyncMessage(`Partial sync: ${created} created, ${skipped} skipped, ${failed} failed.`)
+      if (failed > 0 || lectureFailed > 0) {
+        setSyncMessage(`Partial sync: assignments ${created}/${skipped}/${failed} and recurring events ${lectureCreated}/${lectureSkipped}/${lectureFailed} (created/skipped/failed).`)
       } else {
-        setSyncMessage(`Calendar synced: ${created} created, ${skipped} skipped.`)
+        setSyncMessage(`Calendar synced: assignments ${created} created, ${skipped} skipped; recurring events ${lectureCreated} created, ${lectureSkipped} skipped.`)
       }
 
       await reload()
@@ -323,6 +454,61 @@ export default function DocumentReviewPage({ params }) {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+
+          {/* Course schedule card */}
+          <div style={cardStyle({ overflow: "hidden", padding: 0 })}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 20px", borderBottom: `1.5px solid ${T.border}` }}>
+              <Icon name="calendar" size={14} color={T.accent} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>Course Schedule</span>
+              <span style={{ marginLeft: "auto", fontSize: 12, color: T.faint }}>
+                {doc?.courseId ? `Linked to ${courses.find((c) => c.id === doc.courseId)?.code || "course"}` : "Assign this document to a course first"}
+              </span>
+            </div>
+            {!doc?.courseId ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "28px 24px", color: T.faint, fontSize: 13 }}>
+                Assign this document to a course in Documents before adding schedule details.
+              </div>
+            ) : (
+              <div style={{ padding: "16px 20px", display: "grid", gap: 16 }}>
+                <div style={{ display: "grid", gap: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.faint, textTransform: "uppercase", letterSpacing: "0.06em" }}>Lecture</div>
+                  <DayToggleGroup value={courseSchedule.lectureDays} onChange={(value) => handleScheduleChange("lectureDays", value)} />
+                  <div style={{ display: "grid", gridTemplateColumns: "160px 160px minmax(200px, 1fr)", gap: 10 }}>
+                    <input type="time" value={courseSchedule.lectureStartTime} onChange={(e) => handleScheduleChange("lectureStartTime", e.target.value)} style={inputSt} />
+                    <input type="time" value={courseSchedule.lectureEndTime} onChange={(e) => handleScheduleChange("lectureEndTime", e.target.value)} style={inputSt} />
+                    <input type="text" value={courseSchedule.lectureLocation} onChange={(e) => handleScheduleChange("lectureLocation", e.target.value)} placeholder="Optional location" style={inputSt} />
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gap: 10 }}>
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12.5, color: T.text }}>
+                    <input
+                      type="checkbox"
+                      checked={courseSchedule.sectionEnabled}
+                      onChange={(e) => handleScheduleChange("sectionEnabled", e.target.checked)}
+                    />
+                    Add section/discussion/lab schedule
+                  </label>
+                  {courseSchedule.sectionEnabled && (
+                    <div style={{ display: "grid", gap: 10 }}>
+                      <input type="text" value={courseSchedule.sectionLabel} onChange={(e) => handleScheduleChange("sectionLabel", e.target.value)} placeholder="Section label (e.g. Discussion, Lab)" style={{ ...inputSt, maxWidth: 360 }} />
+                      <DayToggleGroup value={courseSchedule.sectionDays} onChange={(value) => handleScheduleChange("sectionDays", value)} />
+                      <div style={{ display: "grid", gridTemplateColumns: "160px 160px minmax(200px, 1fr)", gap: 10 }}>
+                        <input type="time" value={courseSchedule.sectionStartTime} onChange={(e) => handleScheduleChange("sectionStartTime", e.target.value)} style={inputSt} />
+                        <input type="time" value={courseSchedule.sectionEndTime} onChange={(e) => handleScheduleChange("sectionEndTime", e.target.value)} style={inputSt} />
+                        <input type="text" value={courseSchedule.sectionLocation} onChange={(e) => handleScheduleChange("sectionLocation", e.target.value)} placeholder="Optional section location" style={inputSt} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: "grid", gap: 6, maxWidth: 220 }}>
+                  <span style={{ fontSize: 11.5, color: T.faint }}>Term end date</span>
+                  <input type="date" value={courseSchedule.termEndDate} onChange={(e) => handleScheduleChange("termEndDate", e.target.value)} style={inputSt} />
+                </div>
               </div>
             )}
           </div>

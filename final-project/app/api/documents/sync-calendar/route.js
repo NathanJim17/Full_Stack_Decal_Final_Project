@@ -11,14 +11,24 @@ function isValidDateString(value) {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
 }
 
+function isValidTimeString(value) {
+  return typeof value === "string" && /^\d{2}:\d{2}(:\d{2})?$/.test(value)
+}
+
+function normalizeTimeString(value) {
+  const input = String(value ?? "").trim()
+  if (!isValidTimeString(input)) return ""
+  return input.slice(0, 5)
+}
+
 function toNextDateString(dateString) {
   const date = new Date(`${dateString}T00:00:00.000Z`)
   date.setUTCDate(date.getUTCDate() + 1)
   return date.toISOString().slice(0, 10)
 }
 
-function buildDeterministicEventId(documentId, assignment) {
-  const raw = `${documentId}:${String(assignment.title ?? "").trim().toLowerCase()}:${String(assignment.due_date ?? "").trim()}`
+function buildDeterministicEventId(documentId, key) {
+  const raw = `${documentId}:${key}`
   return `sf${createHash("sha256").update(raw).digest("hex").slice(0, 30)}`
 }
 
@@ -28,7 +38,7 @@ function toEventPayload(document, assignment, documentId, courseCode) {
   const titleWithCourse = courseCode ? `${courseCode} — ${title}` : title
 
   return {
-    id: buildDeterministicEventId(documentId, assignment),
+    id: buildDeterministicEventId(documentId, `assignment:${title.toLowerCase()}:${dueDate}`),
     summary: titleWithCourse,
     description: [
       `Source document: ${document.file_name}`,
@@ -38,6 +48,79 @@ function toEventPayload(document, assignment, documentId, courseCode) {
     ].filter(Boolean).join("\n"),
     start: { date: dueDate },
     end: { date: toNextDateString(dueDate) },
+  }
+}
+
+function dateAndTimeToIso(dateString, timeString) {
+  return `${dateString}T${timeString}:00`
+}
+
+function addMinutes(timeString, minutesToAdd) {
+  const normalized = normalizeTimeString(timeString)
+  const [h, m] = normalized.split(":").map(Number)
+  const totalMinutes = (h * 60) + m + minutesToAdd
+  const nextH = Math.floor((totalMinutes % (24 * 60)) / 60)
+  const nextM = totalMinutes % 60
+  return `${String(nextH).padStart(2, "0")}:${String(nextM).padStart(2, "0")}`
+}
+
+function inferLectureDurationMinutes(days) {
+  const daySet = new Set(days)
+  const hasTuTh = daySet.has("TU") || daySet.has("TH")
+  return hasTuTh ? 90 : 60
+}
+
+function normalizeDays(days) {
+  if (!Array.isArray(days)) return []
+  return days
+    .map(day => String(day).trim().toUpperCase())
+    .filter(day => ["MO", "TU", "WE", "TH", "FR", "SA", "SU"].includes(day))
+}
+
+function normalizeTimeForCalendar(timeString, days, fallbackMinutes) {
+  const input = normalizeTimeString(timeString)
+  if (input) return input
+  const defaultStart = "09:00"
+  return addMinutes(defaultStart, fallbackMinutes ?? inferLectureDurationMinutes(days))
+}
+
+function toRecurringCoursePayload(document, documentId, config) {
+  const days = normalizeDays(config.days)
+  const startTime = normalizeTimeString(config.startTime)
+  const endTimeInput = normalizeTimeString(config.endTime)
+  const endDate = String(config.endDate ?? "").trim()
+
+  if (!days.length || !isValidDateString(endDate) || !isValidTimeString(startTime)) {
+    return { valid: false, reason: `${config.label} requires days, start time, and term end date.` }
+  }
+  const endTime = isValidTimeString(endTimeInput)
+    ? endTimeInput
+    : normalizeTimeForCalendar(endTimeInput, days, config.fallbackDurationMinutes)
+  if (!isValidTimeString(endTime)) {
+    return { valid: false, reason: `${config.label} end time is invalid.` }
+  }
+
+  const startDate = String(config.startDate ?? "").trim() || new Date().toISOString().slice(0, 10)
+  const title = config.title
+  const byday = days.join(",")
+  const untilUtc = `${endDate.replaceAll("-", "")}T235959Z`
+  const key = `${config.keyPrefix}:${days.join(",")}:${startDate}:${startTime}:${endDate}`
+
+  return {
+    valid: true,
+    payload: {
+      id: buildDeterministicEventId(documentId, key),
+      summary: title,
+      description: [
+        `Source document: ${document.file_name}`,
+        config.courseCode ? `Course: ${config.courseCode}` : null,
+        config.location ? `Location: ${config.location}` : null,
+      ].filter(Boolean).join("\n"),
+      start: { dateTime: dateAndTimeToIso(startDate, startTime), timeZone: "America/Los_Angeles" },
+      end: { dateTime: dateAndTimeToIso(startDate, endTime), timeZone: "America/Los_Angeles" },
+      recurrence: [`RRULE:FREQ=WEEKLY;BYDAY=${byday};UNTIL=${untilUtc}`],
+      location: config.location || undefined,
+    },
   }
 }
 
@@ -109,14 +192,16 @@ export async function POST(request) {
   }
 
   let resolvedCourseCode = String(requestedCourseCode ?? "").trim()
-  if (!resolvedCourseCode && document.course_id) {
+  let courseSchedule = null
+  if (document.course_id) {
     const { data: courseRow } = await supabaseAdmin
       .from("courses")
-      .select("code")
+      .select("code, lecture_days, lecture_start_time, lecture_end_time, lecture_location, section_enabled, section_label, section_days, section_start_time, section_end_time, section_location, term_end_date")
       .eq("id", document.course_id)
       .eq("user_id", user.id)
       .maybeSingle()
-    resolvedCourseCode = String(courseRow?.code ?? "").trim()
+    courseSchedule = courseRow
+    if (!resolvedCourseCode) resolvedCourseCode = String(courseRow?.code ?? "").trim()
   }
 
   const assignments = Array.isArray(document.extracted_assignments) ? document.extracted_assignments : []
@@ -124,6 +209,9 @@ export async function POST(request) {
   let created = 0
   let skipped = 0
   let failed = 0
+  let lectureCreated = 0
+  let lectureSkipped = 0
+  let lectureFailed = 0
 
   for (const assignment of assignments) {
     const title = String(assignment?.title ?? "").trim()
@@ -159,12 +247,76 @@ export async function POST(request) {
     results.push({ title, due_date: dueDate, outcome: "failed", detail: createResult.error })
   }
 
+  const termEndDate = String(courseSchedule?.term_end_date ?? "").slice(0, 10)
+  const lecturePayload = toRecurringCoursePayload(document, documentId, {
+    keyPrefix: "lecture",
+    title: resolvedCourseCode ? `${resolvedCourseCode} — Lecture` : "Lecture",
+    label: "Lecture schedule",
+    courseCode: resolvedCourseCode,
+    days: courseSchedule?.lecture_days,
+    startTime: courseSchedule?.lecture_start_time,
+    endTime: courseSchedule?.lecture_end_time,
+    endDate: termEndDate,
+    location: courseSchedule?.lecture_location,
+    fallbackDurationMinutes: 60,
+  })
+
+  if (!lecturePayload.valid) {
+    lectureFailed += 1
+    results.push({ title: "Lecture", due_date: termEndDate, outcome: "lecture_failed_validation", detail: lecturePayload.reason })
+  } else {
+    const createResult = await createCalendarEvent(providerAccessToken, lecturePayload.payload)
+    if (createResult.ok && createResult.duplicate) {
+      lectureSkipped += 1
+      results.push({ title: "Lecture", due_date: termEndDate, outcome: "lecture_skipped_existing" })
+    } else if (createResult.ok) {
+      lectureCreated += 1
+      results.push({ title: "Lecture", due_date: termEndDate, outcome: "lecture_created" })
+    } else {
+      lectureFailed += 1
+      results.push({ title: "Lecture", due_date: termEndDate, outcome: "lecture_failed", detail: createResult.error })
+    }
+  }
+
+  if (courseSchedule?.section_enabled) {
+    const sectionLabel = String(courseSchedule.section_label ?? "").trim() || "Section"
+    const sectionPayload = toRecurringCoursePayload(document, documentId, {
+      keyPrefix: "section",
+      title: resolvedCourseCode ? `${resolvedCourseCode} — ${sectionLabel}` : sectionLabel,
+      label: "Section schedule",
+      courseCode: resolvedCourseCode,
+      days: courseSchedule.section_days,
+      startTime: courseSchedule.section_start_time,
+      endTime: courseSchedule.section_end_time,
+      endDate: termEndDate,
+      location: courseSchedule.section_location,
+      fallbackDurationMinutes: 90,
+    })
+
+    if (!sectionPayload.valid) {
+      lectureFailed += 1
+      results.push({ title: sectionLabel, due_date: termEndDate, outcome: "lecture_failed_validation", detail: sectionPayload.reason })
+    } else {
+      const sectionResult = await createCalendarEvent(providerAccessToken, sectionPayload.payload)
+      if (sectionResult.ok && sectionResult.duplicate) {
+        lectureSkipped += 1
+        results.push({ title: sectionLabel, due_date: termEndDate, outcome: "lecture_skipped_existing" })
+      } else if (sectionResult.ok) {
+        lectureCreated += 1
+        results.push({ title: sectionLabel, due_date: termEndDate, outcome: "lecture_created" })
+      } else {
+        lectureFailed += 1
+        results.push({ title: sectionLabel, due_date: termEndDate, outcome: "lecture_failed", detail: sectionResult.error })
+      }
+    }
+  }
+
   const total = assignments.length
-  const syncStatus = failed === 0 ? "synced" : "error"
-  const failureSummary = failed === 0
+  const syncStatus = failed === 0 && lectureFailed === 0 ? "synced" : "error"
+  const failureSummary = failed === 0 && lectureFailed === 0
     ? null
-    : failed < total
-      ? `${failed} of ${total} events failed to sync. Some events may already exist or need renewed Google permissions.`
+    : failed + lectureFailed < total + 2
+      ? `${failed} assignment and ${lectureFailed} lecture events failed to sync. Some events may already exist, require end dates, or need renewed Google permissions.`
       : "Calendar sync failed. Please reconnect Google and try again."
 
   try {
@@ -184,9 +336,18 @@ export async function POST(request) {
   }
 
   return Response.json({
-    ok: failed === 0,
+    ok: failed === 0 && lectureFailed === 0,
     status: syncStatus,
     summary: { total, created, skipped, failed },
+    lectureSummary: { total: courseSchedule?.section_enabled ? 2 : 1, created: lectureCreated, skipped: lectureSkipped, failed: lectureFailed },
+    summary_flat: {
+      created,
+      skipped,
+      failed,
+      lecture_created: lectureCreated,
+      lecture_skipped: lectureSkipped,
+      lecture_failed: lectureFailed,
+    },
     error: failureSummary,
     results,
   }, { status: 200 })

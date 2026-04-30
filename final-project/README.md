@@ -45,3 +45,16 @@ Google Calendar event creation uses Google OAuth through Supabase (not API keys)
 - Users re-consent after scope updates (sign out/in again, or revoke app access in Google Account permissions).
 
 The review page sync flow sends the current Supabase access token plus Google provider token to `POST /api/documents/sync-calendar`.
+
+### Course schedule sync
+
+Lecture times are now manual user input at the course level (not parser extracted).
+From the document review page, users enter and save:
+
+- lecture days (`MO..SU`) and start/end times
+- optional lecture location
+- optional section/discussion/lab schedule (custom label, days, times, optional location)
+- term end date (used as recurrence end for lecture/section events)
+
+Apply the schema file in Supabase SQL Editor before using this flow:
+- `course_schedule_schema.sql`

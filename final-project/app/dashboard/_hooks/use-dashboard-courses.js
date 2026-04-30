@@ -20,7 +20,7 @@ export function useDashboardCourses(userId) {
 
     const { data, error: dbError } = await supabase
       .from("courses")
-      .select("id, code, name, prof, color, color_bg, assignments, exams, progress, synced")
+      .select("id, code, name, prof, color, color_bg, assignments, exams, progress, synced, lecture_days, lecture_start_time, lecture_end_time, lecture_location, section_enabled, section_label, section_days, section_start_time, section_end_time, section_location, term_end_date")
       .eq("user_id", userId)
       .order("code", { ascending: true })
 
@@ -41,6 +41,17 @@ export function useDashboardCourses(userId) {
       exams: row.exams ?? 0,
       progress: row.progress ?? 0,
       synced: row.synced ?? false,
+      lectureDays: Array.isArray(row.lecture_days) ? row.lecture_days : [],
+      lectureStartTime: row.lecture_start_time ?? "",
+      lectureEndTime: row.lecture_end_time ?? "",
+      lectureLocation: row.lecture_location ?? "",
+      sectionEnabled: row.section_enabled ?? false,
+      sectionLabel: row.section_label ?? "",
+      sectionDays: Array.isArray(row.section_days) ? row.section_days : [],
+      sectionStartTime: row.section_start_time ?? "",
+      sectionEndTime: row.section_end_time ?? "",
+      sectionLocation: row.section_location ?? "",
+      termEndDate: row.term_end_date ?? "",
       deadlines: [],
     }))
 

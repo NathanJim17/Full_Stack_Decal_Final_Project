@@ -1,7 +1,6 @@
 import io
 import json
 import os
-from typing import Literal
 
 import requests
 from dotenv import load_dotenv
@@ -51,7 +50,7 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
     return "\n".join(chunks).strip()
 
 
-def gemini_extract_assignments(text: str) -> list[dict]:
+def gemini_extract_schedule(text: str) -> dict:
     gemini_api_key = os.environ["GEMINI_API_KEY"]
     model = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
 
@@ -69,8 +68,6 @@ def gemini_extract_assignments(text: str) -> list[dict]:
                     "properties": {
                         "title": {"type": "string"},
                         "due_date": {"type": "string", "description": "YYYY-MM-DD when explicit, else empty string"},
-                        # Gemini JSON schema response mode doesn't reliably support union types like ["number","null"].
-                        # We store weight as a number and use 0 when the syllabus doesn't specify it.
                         "weight": {"type": "number", "description": "Parse points/percent into a number; use 0 when unknown"},
                         "type": {
                             "type": "string",
@@ -95,7 +92,7 @@ Rules:
 - due_date: YYYY-MM-DD if the date is explicit; otherwise empty string "".
 - weight: if points/percent are present, parse into a number; otherwise 0.
 - type: choose one of [Homework, Exam, Project, Quiz, Lab].
-- If unsure, still return the best title you can and fill missing fields as specified.
+- If unsure, keep fields empty rather than inventing.
 
 Syllabus text:
 {truncated}
@@ -112,7 +109,7 @@ Syllabus text:
         "generationConfig": {
             "responseMimeType": "application/json",
             "responseSchema": schema,
-            "maxOutputTokens": 1024,
+            "maxOutputTokens": 4096,
             "temperature": 0.2,
         },
     }
@@ -128,8 +125,10 @@ Syllabus text:
         parsed = json.loads(model_text)
         assignments = parsed.get("assignments", [])
         if not isinstance(assignments, list):
-            return []
-        return assignments
+            return {"assignments": []}
+        return {
+            "assignments": assignments,
+        }
     except Exception as e:
         print("Gemini JSON parse failed. Raw response:", json.dumps(data)[:1500])
         raise HTTPException(status_code=502, detail=f"Gemini JSON parse failed: {e}")
@@ -157,8 +156,8 @@ def parse(req: ParseRequest):
         if not text:
             raise HTTPException(status_code=422, detail="PDF text extraction returned empty text.")
 
-        assignments = gemini_extract_assignments(text)
-        return {"assignments": assignments}
+        extracted = gemini_extract_schedule(text)
+        return extracted
     except HTTPException:
         raise
     except Exception as e:
