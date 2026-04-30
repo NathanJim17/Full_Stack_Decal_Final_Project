@@ -34,3 +34,28 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Google Calendar Sync (MVP)
+
+Google Calendar event creation uses Google OAuth through Supabase (not API keys). Ensure:
+
+- Google Calendar API is enabled in your Google Cloud project.
+- Supabase Google provider uses your OAuth client ID and client secret.
+- The OAuth sign-in flow requests the scope `https://www.googleapis.com/auth/calendar.events`.
+- Users re-consent after scope updates (sign out/in again, or revoke app access in Google Account permissions).
+
+The review page sync flow sends the current Supabase access token plus Google provider token to `POST /api/documents/sync-calendar`.
+
+### Course schedule sync
+
+Lecture times are now manual user input at the course level (not parser extracted).
+From the document review page, users enter and save:
+
+- course start date
+- lecture days (`MO..SU`) and start/end times
+- optional lecture location
+- optional section/discussion/lab schedule (custom label, days, times, optional location)
+- term end date (used as recurrence end for lecture/section events)
+
+Apply the schema file in Supabase SQL Editor before using this flow:
+- `course_schedule_schema.sql`

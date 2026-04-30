@@ -25,11 +25,19 @@ async function parseWithFastApi(document, userId) {
   })
 
   if (!response.ok) {
-    throw new Error(`Parser request failed (${response.status})`)
+    let errText = ""
+    try {
+      errText = await response.text()
+    } catch {
+      errText = ""
+    }
+    throw new Error(`Parser request failed (${response.status})${errText ? `: ${errText.slice(0, 300)}` : ""}`)
   }
 
   const json = await response.json()
-  return Array.isArray(json?.assignments) ? json.assignments : []
+  return {
+    assignments: Array.isArray(json?.assignments) ? json.assignments : [],
+  }
 }
 
 export async function POST(request) {
@@ -72,13 +80,13 @@ export async function POST(request) {
   }
 
   try {
-    const assignments = await parseWithFastApi(document, user.id)
+    const parsed = await parseWithFastApi(document, user.id)
 
     const { error: updateError } = await supabaseAdmin
       .from("documents")
       .update({
         status: "ready_to_review",
-        extracted_assignments: assignments,
+        extracted_assignments: parsed.assignments,
         error_message: null,
       })
       .eq("id", document.id)
@@ -88,9 +96,14 @@ export async function POST(request) {
       throw updateError
     }
 
-    return Response.json({ ok: true, status: "ready_to_review", assignmentsCount: assignments.length }, { status: 200 })
+    return Response.json({
+      ok: true,
+      status: "ready_to_review",
+      assignmentsCount: parsed.assignments.length,
+    }, { status: 200 })
   } catch (err) {
     const errorMessage = getErrorMessage(err)
+    console.error("documents/parse failed:", errorMessage)
     await supabaseAdmin
       .from("documents")
       .update({
