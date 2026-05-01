@@ -3,6 +3,7 @@ from notion_client import Client  # type: ignore[import]
 import os
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import]
 from supabase import create_client, Client as SupabaseClient  # type: ignore[import]
+from pydantic import BaseModel  # type: ignore[import]
 
 app = FastAPI()
 
@@ -39,72 +40,47 @@ def query_notion_database():
     return response
 
 # ----------- Page Route -----------
-
-@app.post("/api/notion/page")
-def create_notion_page(title: str, content: str):
-    """
-    Creates a new page in the Notion database/homepage with the given title and content.
-    """
-
-    new_page = {
-        "parent": {"database_id": DATABASE_ID},
-        "properties": {
-            "Name": {
-                "title": [
-                    {
-                        "text": {
-                            "content": title
-                        }
-                    }
-                ]
-            }
-        },
-        "children": [
-            {
-                "object": "block",
-                "type": "paragraph",
-                "paragraph": {
-                    "text": [
-                        {
-                            "type": "text",
-                            "text": {
-                                "content": content
-                            }
-                        }
-                    ]
-                }
-            }
-        ]
-    }
-    response = notion.pages.create(**new_page)
-    return {"status": "success", "page_url": new_page["url"], "response": response}
-
-# ----------- Page from Uploaded Document -----------
+# Define what the frontend is sending in the body
+class NotionPageRequest(BaseModel):
+    title: str
+    content: str
 
 @app.post("/api/notion/page-from-supabase")
 def create_page_from_supabase(file_id: str):
     # 1. Extract the file info from Supabase
-    # We query the 'files' table where the id matches the one sent from frontend
-    response = supabase.table("files").select("name, content_summary").eq("id", file_id).single().execute()
+    response = supabase.table("documents").select("file_name, extracted_assignments").eq("id", file_id).single().execute()
     
     if not response.data:
         return {"error": "File not found in database"}
     
     file_data = response.data
-    file_name = file_data.get("name")
-    summary = file_data.get("content_summary", "No content available")
+    # We can now mix Supabase data with User input data!
+    supabase_name = file_data.get("file_name")
+    summary = file_data.get("extracted_assignments", "No content available")
 
     # 2. Use that data to create the Notion page
     new_page = {
         "parent": {"database_id": DATABASE_ID},
         "properties": {
-            "Name": {"title": [{"text": {"content": f"Notes for: {file_name}"}}]}
+            "Name": {
+                "title": [{"text": {"content": file_data.title or f"Notes for: {supabase_name}"}}]
+            }
         },
         "children": [
             {
                 "object": "block",
                 "type": "heading_2",
-                "heading_2": {"rich_text": [{"text": {"content": "Document Summary"}}]}
+                "heading_2": {"rich_text": [{"text": {"content": "User Description"}}]}
+            },
+            {
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {"rich_text": [{"text": {"content": file_data.content}}]}
+            },
+            {
+                "object": "block",
+                "type": "heading_2",
+                "heading_2": {"rich_text": [{"text": {"content": "Auto-Generated Summary"}}]}
             },
             {
                 "object": "block",
