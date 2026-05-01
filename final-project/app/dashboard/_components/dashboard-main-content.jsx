@@ -148,6 +148,9 @@ export function DashboardMainContent({
 
           <h2 style={{ fontSize: 15, fontWeight: 600, color: T.text, fontFamily: "'Lora', serif", marginBottom: 12 }}>Quick Actions</h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
+            <Button onClick={handleCreateNotionPage} style={{ marginBottom: 10 }}>
+              DEBUG: Open Notion Modal
+            </Button>
             {QUICK_ACTIONS.map((a) => (
               <Button
                 key={a.label}
